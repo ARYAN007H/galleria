@@ -27,14 +27,23 @@ jobs:
       - uses: actions/checkout@v4
 
       # The develop engine is a pinned path dependency (`../../lightcraft` from
-      # src-tauri). Check it out beside this repo at the commit the release was
-      # verified against (LightCraft 0.14.x).
+      # src-tauri). actions/checkout can't write outside the workspace, so check
+      # the engine out inside it and link it to where the deps expect it.
       - name: checkout LightCraft engine (pinned)
         uses: actions/checkout@v4
         with:
           repository: storytold/lightcraft
           ref: 662df66f1c08bdb1b1f1d0c1c638c4cef936d0b0
-          path: ../lightcraft
+          path: lightcraft
+
+      - name: link engine to the path Cargo expects (posix)
+        if: matrix.platform != 'windows-latest'
+        run: ln -s "$GITHUB_WORKSPACE/lightcraft" "$GITHUB_WORKSPACE/../lightcraft"
+
+      - name: link engine to the path Cargo expects (windows)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: New-Item -ItemType SymbolicLink -Path "$env:GITHUB_WORKSPACE\..\lightcraft" -Target "$env:GITHUB_WORKSPACE\lightcraft" | Out-Null
 
       - name: install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-22.04'
