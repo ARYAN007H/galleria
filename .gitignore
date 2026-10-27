@@ -31,3 +31,6 @@ vscode_history_oss/-4a8c90a/*
 .env.*
 check_output*.txt
 .agent/
+build_err.txt
+*_err.txt
+photo-sorter@*
