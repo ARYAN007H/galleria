@@ -26,12 +26,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The develop engine is a pinned path dependency (`../../lightcraft` from
+      # src-tauri). Check it out beside this repo at the commit the release was
+      # verified against (LightCraft 0.14.x).
+      - name: checkout LightCraft engine (pinned)
+        uses: actions/checkout@v4
+        with:
+          repository: storytold/lightcraft
+          ref: 662df66f1c08bdb1b1f1d0c1c638c4cef936d0b0
+          path: ../lightcraft
+
       - name: install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-          
+
       - name: setup node
         uses: actions/setup-node@v4
         with:
@@ -41,6 +51,11 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
 
       - name: install frontend dependencies
         run: npm install

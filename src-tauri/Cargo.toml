@@ -37,7 +37,7 @@ tauri-plugin-updater = "2.0.0-beta.0"
 bytemuck = "1"
 
 # LightCraft develop engine (https://github.com/storytold/lightcraft), MIT OR Apache-2.0.
-# Pinned to the local checkout at release 0.14.0 (commit 03c88c16); bump by pulling that repo.
+# Pinned to the local checkout at release 0.14.0 (commit 662df66f, 0.14.x); bump by pulling that repo.
 # avif-serialize pinned to the exact version lightcraft's Cargo.lock builds with (0.8.6 lacks
 # Aviffy::set_content_light_level, which codecs' AVIF encoder calls).
 avif-serialize = "=0.8.9"

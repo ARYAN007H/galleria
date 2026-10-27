@@ -44,7 +44,7 @@ Frontend (`src/`):
 2. **Mask hue/sat local adjustments**: `localAdjustmentsToDev` maps temp/tint/exposure/…/noise/sharpness but not the mask `hue`/`saturation` (LightCraft has `hue`, `saturation`, `color_hue/color_sat` overlay). Add to the mapping in `developSettings.ts` when masks get color controls.
 3. **SettingsPanel.svelte (line ~293) & BottomPill.svelte** type errors — pre-existing, unrelated to the swap.
 4. **Roadmap features** (engine-side ready, UI work needed): Point Color panel, spot removal/heal UI, masks beyond linear/radial (brush strokes → `MaskShape::Brush`), AI masks (enable `sam` feature + model download), Denoise (`denoise` feature), HDR editing UI, Upright/geometry panel, 16-bit/HDR export options, XMP sidecar interop (`docs/xmp-interop.md`).
-5. **Bump LightCraft**: it's a path dep on the sibling checkout at release 0.14.0 (commit 03c88c16). `git -C ../lightcraft pull && cargo update -p <changed>` then re-pin `avif-serialize` if codecs changes.
+5. **Bump LightCraft**: it's a path dep on the sibling checkout at release 0.14.0 (commit 662df66f). `git -C ../lightcraft pull && cargo update -p <changed>` then re-pin `avif-serialize` if codecs changes.
 
 ## Gotchas
 

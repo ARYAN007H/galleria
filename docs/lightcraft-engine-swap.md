@@ -16,7 +16,7 @@
 
 ## Embedding strategy (decided)
 
-- **Depend on crates by path** from the sibling checkout `../../lightcraft/crates/*` (pinned commit `03c88c16`, release 0.14.0; toolchain rustc 1.99.1 ≥ MSRV 1.95). License: MIT OR Apache-2.0, compatible with Galleria's Apache-2.0 (choose Apache-2.0; NOTICE attribution added below).
+- **Depend on crates by path** from the sibling checkout `../../lightcraft/crates/*` (pinned commit `662df66f`, release 0.14.0; toolchain rustc 1.99.1 ≥ MSRV 1.95). License: MIT OR Apache-2.0, compatible with Galleria's Apache-2.0 (choose Apache-2.0; NOTICE attribution added below).
 - **Decode**: `lightcraft_engine::files::load_vec(bytes, max_edge) -> (Rgb32f, SourceInfo)` — the one maintained entry that does RAW demosaic (binned for previews), camera colour-model fit, highlight rebuild, orientation, embedded JPEG fallback for unsupported RAWs, and non-RAW codecs decode. Vendoring the 4.5k-line colour-science path would drift from upstream — rejected.
 - **Render**: `lightcraft_pipeline::render_cached(&Arc<Rgb32f>, &SourceInfo, &DevelopSettings, &RenderRequest, &StageCache) -> Rendered { image: Rgba8, histogram }`.
 - **Engine crate with `default-features = false`** (no SAM/candle AI deps, no denoise runtime). It does transitively pull gpu/catalog/etc. — compile-time cost only; we never construct sessions.
