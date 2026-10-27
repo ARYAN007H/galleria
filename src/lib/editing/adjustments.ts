@@ -1,6 +1,8 @@
 // ── Editing Adjustment State ──
 // Type definitions and defaults for all editing parameters
 
+import { toDevelopSettings } from './developSettings';
+
 export interface ToneCurvePoint {
     x: number; // 0-255
     y: number; // 0-255
@@ -21,6 +23,7 @@ export interface ColorWheelState {
 export interface AdjustmentState {
     // ── Global Adjustments ──
     // Basic
+    wbMode: 'asShot' | 'auto' | 'daylight' | 'cloudy' | 'shade' | 'tungsten' | 'fluorescent' | 'flash' | 'custom';
     temperature: number; // 2000-50000K
     tint: number;        // -150 to 150
     exposure: number;    // -5 to +5 EVs
@@ -35,6 +38,10 @@ export interface AdjustmentState {
     vibrance: number;
     saturation: number;
 
+    // Treatment (Color / B&W) — B&W swaps the Color Mixer panel for the B&W Mix
+    treatment: 'color' | 'bw';
+    bwMix: number[]; // 8 bands, -100 to 100
+
     // Tone Curve
     toneCurveChannel: 'rgb' | 'r' | 'g' | 'b';
     toneCurveRgb: ToneCurvePoint[];
@@ -47,6 +54,7 @@ export interface AdjustmentState {
     tcParametricLights: number;     // -100 to 100
     tcParametricDarks: number;      // -100 to 100
     tcParametricShadows: number;    // -100 to 100
+    refineSaturation: number;       // 0-100 (curve saturation protection, 100 = keep)
 
     // HSL (8 color ranges)
     hsl: HSLChannelState[];
@@ -55,6 +63,7 @@ export interface AdjustmentState {
     cgShadows: ColorWheelState;
     cgMidtones: ColorWheelState;
     cgHighlights: ColorWheelState;
+    cgGlobal: ColorWheelState;
     cgBlending: number;
     cgBalance: number;
 
@@ -75,6 +84,12 @@ export interface AdjustmentState {
     lensVignetting: number;
     lensCaRed: number;
     lensCaBlue: number;
+    removeCA: boolean;           // automatic CA removal
+    lensProfileEnabled: boolean; // apply the file's embedded lens profile (DNG opcodes)
+    profileDistortion: number;   // 0-100 amount for the embedded profile's distortion
+    profileVignetting: number;   // 0-100 amount for the embedded profile's vignetting
+    defringePurple: number;      // 0-100 purple fringe removal
+    defringeGreen: number;       // 0-100 green fringe removal
 
     // Effects
     vignetteAmount: number;
@@ -82,6 +97,7 @@ export interface AdjustmentState {
     vignetteRoundness: number;
     vignetteFeather: number;
     vignetteHighlights: number;
+    vignetteStyle: 'highlightPriority' | 'colorPriority' | 'paintOverlay';
     grainAmount: number;
     grainSize: number;
     grainRoughness: number;
@@ -151,6 +167,7 @@ function makeDefaultWheel(): ColorWheelState {
 }
 
 export const defaultAdjustments: AdjustmentState = {
+    wbMode: 'asShot',
     temperature: 6500,
     tint: 0,
     exposure: 0,
@@ -165,6 +182,9 @@ export const defaultAdjustments: AdjustmentState = {
     vibrance: 0,
     saturation: 0,
 
+    treatment: 'color',
+    bwMix: Array.from({ length: 8 }, () => 0),
+
     toneCurveChannel: 'rgb',
     toneCurveRgb: [{ x: 0, y: 0 }, { x: 255, y: 255 }],
     toneCurveR: [{ x: 0, y: 0 }, { x: 255, y: 255 }],
@@ -175,12 +195,14 @@ export const defaultAdjustments: AdjustmentState = {
     tcParametricLights: 0,
     tcParametricDarks: 0,
     tcParametricShadows: 0,
+    refineSaturation: 100,
 
     hsl: makeDefaultHSL(),
 
     cgShadows: makeDefaultWheel(),
     cgMidtones: makeDefaultWheel(),
     cgHighlights: makeDefaultWheel(),
+    cgGlobal: makeDefaultWheel(),
     cgBlending: 50,
     cgBalance: 0,
 
@@ -199,12 +221,19 @@ export const defaultAdjustments: AdjustmentState = {
     lensVignetting: 0,
     lensCaRed: 0,
     lensCaBlue: 0,
+    removeCA: false,
+    lensProfileEnabled: false,
+    profileDistortion: 100,
+    profileVignetting: 100,
+    defringePurple: 0,
+    defringeGreen: 0,
 
     vignetteAmount: 0,
     vignetteMidpoint: 50,
     vignetteRoundness: 0,
     vignetteFeather: 50,
     vignetteHighlights: 0,
+    vignetteStyle: 'highlightPriority',
     grainAmount: 0,
     grainSize: 25,
     grainRoughness: 50,
@@ -230,110 +259,13 @@ export function cloneAdjustments(adj: AdjustmentState): AdjustmentState {
     return JSON.parse(JSON.stringify(adj));
 }
 
-/** Convert AdjustmentState to the payload format expected by Rust */
+/**
+ * Convert AdjustmentState to the payload expected by the Rust backend:
+ * LightCraft `DevelopSettings` JSON (see developSettings.ts for the mapping).
+ * Kept under the historical name — the editor's invoke sites use it.
+ */
 export function toRustPayload(adj: AdjustmentState): Record<string, unknown> {
-    return {
-        temperature: adj.temperature,
-        tint: adj.tint,
-        exposure: adj.exposure,
-        contrast: adj.contrast,
-        highlights: adj.highlights,
-        shadows: adj.shadows,
-        whites: adj.whites,
-        blacks: adj.blacks,
-        texture: adj.texture,
-        clarity: adj.clarity,
-        dehaze: adj.dehaze,
-        vibrance: adj.vibrance,
-        saturation: adj.saturation,
-
-        toneCurveRgb: adj.toneCurveRgb.map(p => [p.x, p.y]),
-        toneCurveR: adj.toneCurveR.map(p => [p.x, p.y]),
-        toneCurveG: adj.toneCurveG.map(p => [p.x, p.y]),
-        toneCurveB: adj.toneCurveB.map(p => [p.x, p.y]),
-
-        tcParametricHighlights: adj.tcParametricHighlights,
-        tcParametricLights: adj.tcParametricLights,
-        tcParametricDarks: adj.tcParametricDarks,
-        tcParametricShadows: adj.tcParametricShadows,
-
-        hslHue: adj.hsl.map(h => h.hue),
-        hslSat: adj.hsl.map(h => h.saturation),
-        hslLum: adj.hsl.map(h => h.luminance),
-
-        cgShadowsHue: adj.cgShadows.hue,
-        cgShadowsSat: adj.cgShadows.saturation,
-        cgShadowsLum: adj.cgShadows.luminance,
-        cgMidtonesHue: adj.cgMidtones.hue,
-        cgMidtonesSat: adj.cgMidtones.saturation,
-        cgMidtonesLum: adj.cgMidtones.luminance,
-        cgHighlightsHue: adj.cgHighlights.hue,
-        cgHighlightsSat: adj.cgHighlights.saturation,
-        cgHighlightsLum: adj.cgHighlights.luminance,
-        cgBlending: adj.cgBlending,
-        cgBalance: adj.cgBalance,
-
-        sharpenAmount: adj.sharpenAmount,
-        sharpenRadius: adj.sharpenRadius,
-        sharpenDetail: adj.sharpenDetail,
-        sharpenMasking: adj.sharpenMasking,
-        nrLuminance: adj.nrLuminance,
-        nrLumDetail: adj.nrLumDetail,
-        nrLumContrast: adj.nrLumContrast,
-        nrColor: adj.nrColor,
-        nrColorDetail: adj.nrColorDetail,
-        nrColorSmooth: adj.nrColorSmooth,
-
-        lensDistortion: adj.lensDistortion,
-        lensVignetting: adj.lensVignetting,
-        lensCaRed: adj.lensCaRed,
-        lensCaBlue: adj.lensCaBlue,
-
-        vignetteAmount: adj.vignetteAmount,
-        vignetteMidpoint: adj.vignetteMidpoint,
-        vignetteRoundness: adj.vignetteRoundness,
-        vignetteFeather: adj.vignetteFeather,
-        vignetteHighlights: adj.vignetteHighlights,
-        grainAmount: adj.grainAmount,
-        grainSize: adj.grainSize,
-        grainRoughness: adj.grainRoughness,
-
-        calShadowTint: adj.calShadowTint,
-        calRedHue: adj.calRedHue,
-        calRedSat: adj.calRedSat,
-        calGreenHue: adj.calGreenHue,
-        calGreenSat: adj.calGreenSat,
-        calBlueHue: adj.calBlueHue,
-        calBlueSat: adj.calBlueSat,
-
-        cropX: adj.cropX,
-        cropY: adj.cropY,
-        cropWidth: adj.cropWidth,
-        cropHeight: adj.cropHeight,
-        cropRotation: adj.cropRotation,
-
-        masks: adj.masks.map(m => ({
-            id: m.id,
-            maskType: m.type,
-            active: m.active,
-            inverted: m.inverted,
-            x1: m.x1,
-            y1: m.y1,
-            x2: m.x2,
-            y2: m.y2,
-            radius: m.radius,
-            feather: m.feather,
-            // Convert partial adjustment struct dynamically
-            adjustments: Object.fromEntries(
-                Object.entries(m.adjustments)
-                .map(([k, v]) => {
-                    // Match the expected flat rust struct keys by creating a pseudo-payload
-                    // We recursively serialize a full dummy state overlaid with the partial
-                    return [k, v];
-                })
-            ) // we will map this better shortly
-        }))
-    };
+    return toDevelopSettings(adj) as unknown as Record<string, unknown>;
 }
 
 // ── Filter Presets ──

@@ -29,6 +29,18 @@
         dispatch('change', { hsl: Array.from({ length: 8 }, () => ({ hue: 0, saturation: 0, luminance: 0 })) });
     }
 
+    function updateBwMix(idx: number, value: number) {
+        const updated = [...(adjustments.bwMix ?? Array.from({ length: 8 }, () => 0))];
+        updated[idx] = value;
+        dispatch('change', { bwMix: updated });
+    }
+
+    function scrubBwMix(idx: number, value: number) {
+        const updated = [...(adjustments.bwMix ?? Array.from({ length: 8 }, () => 0))];
+        updated[idx] = value;
+        dispatch('scrub', { bwMix: updated });
+    }
+
     function toggle() { expanded = !expanded; }
 
     const propConfig = {
@@ -51,6 +63,24 @@
     </button>
     {#if expanded}
         <div class="panel-body" transition:slide|local={{ duration: 250 }}>
+            {#if adjustments.treatment === 'bw'}
+                <!-- B&W mode: per-band luminance contribution (LightCraft bw_mix) -->
+                {#each HSL_COLORS as color, idx}
+                    <div class="hsl-row">
+                        <span class="color-dot" style="background: {HSL_COLOR_HEX[color]}; filter: grayscale(1);"></span>
+                        <SliderRow
+                            label={color}
+                            value={adjustments.bwMix?.[idx] ?? 0}
+                            min={-100}
+                            max={100}
+                            step={1}
+                            defaultValue={0}
+                            on:change={(e) => updateBwMix(idx, e.detail)}
+                            on:scrub={(e) => scrubBwMix(idx, e.detail)}
+                        />
+                    </div>
+                {/each}
+            {:else}
             <div class="view-tabs">
                 <button class="view-tab" class:active={viewMode === 'hue'} on:click={() => viewMode = 'hue'}>Hue</button>
                 <button class="view-tab" class:active={viewMode === 'saturation'} on:click={() => viewMode = 'saturation'}>Saturation</button>
@@ -72,6 +102,7 @@
                     />
                 </div>
             {/each}
+            {/if}
         </div>
     {/if}
 </div>

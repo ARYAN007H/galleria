@@ -4,6 +4,10 @@
   <p><i>Fast, offline-first, and beautifully designed.</i></p>
 </div>
 
+<p align="center">
+  <img alt="The Galleria editor: a Golden Hour edit in progress with the live RGB histogram, white-balance presets and the section rail" src="docs/screenshots/editor.png" width="82%">
+</p>
+
 ---
 
 ## 🌟 The Story
@@ -25,6 +29,19 @@ Aesthetically, the app is a deep dive into Google's **Material Design 3 (M3) Exp
 - ⚡ **Offline-First & Fast:** Powered by a Rust backend and embedded SQLite, it recursively indexes your folders to extract EXIF data without ever pinging a cloud server.
 - 📁 **Albums & Collections:** Fully featured intuitive album management to group your best shots.
 - 🔍 **Smart Filtering:** Find exactly what you need by filtering by Year, Month, Folder, or Media Type.
+
+## 🎛️ The Editing Engine (LightCraft)
+
+As of v0.15, the editor runs on the [**LightCraft**](https://github.com/storytold/lightcraft) develop engine — an open-source, Lightroom-class **scene-referred, 32-bit float, wide-gamut pipeline** (linear Rec.2020 → OkLCh colour), rendered through **wgpu on the GPU** with a CPU fallback. That means:
+
+- **Non-destructive edits** persisted as develop-settings JSON per photo: exposure, contrast, highlights/shadows, point + parametric tone curves, an 8-band colour mixer, 3-way + global colour-grading wheels, texture/clarity/dehaze, sharpening & noise reduction, lens corrections (profile + manual + defringe), vignette, grain and camera calibration.
+- **Camera RAW support** — DNG, CR2/CR3, NEF, ARW, RAF, ORF, RW2 and friends (binned decodes for previews, demosaiced for exports), with real RAW thumbnails in the gallery.
+- **Lightroom-grade tooling** — white-balance presets with Kelvin sliders, one-click Auto tone & white balance (scene analysis), local-adjustment masks, before/after, undo history and snapshots.
+- **Exports** in JPEG, PNG, WebP and TIFF at full resolution through the same pipeline — with hard guards so an export can only ever be written beside the original photo.
+
+| Gallery | Colour Grading |
+| --- | --- |
+| ![Gallery grid](docs/screenshots/gallery.png) | ![Colour grading wheels](docs/screenshots/color-grading.png) |
 
 ---
 

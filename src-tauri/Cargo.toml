@@ -1,6 +1,6 @@
 [package]
 name = "galleria_expressive"
-version = "0.1.0"
+version = "0.15.0"
 description = "Photo and media viewer with Liquid Glass UI"
 authors = ["you"]
 edition = "2021"
@@ -34,7 +34,26 @@ hex = "0.4"
 sysinfo = "0.30"
 notify = "6"
 tauri-plugin-updater = "2.0.0-beta.0"
+bytemuck = "1"
+
+# LightCraft develop engine (https://github.com/storytold/lightcraft), MIT OR Apache-2.0.
+# Pinned to the local checkout at release 0.14.0 (commit 03c88c16); bump by pulling that repo.
+# avif-serialize pinned to the exact version lightcraft's Cargo.lock builds with (0.8.6 lacks
+# Aviffy::set_content_light_level, which codecs' AVIF encoder calls).
+avif-serialize = "=0.8.9"
+lightcraft-engine = { path = "../../lightcraft/crates/engine", default-features = false }
+lightcraft-gpu = { path = "../../lightcraft/crates/gpu" }
+lightcraft-pipeline = { path = "../../lightcraft/crates/pipeline" }
+lightcraft-develop = { path = "../../lightcraft/crates/develop" }
+lightcraft-codecs = { path = "../../lightcraft/crates/codecs" }
+lightcraft-raster = { path = "../../lightcraft/crates/raster" }
+lightcraft-raw = { path = "../../lightcraft/crates/raw" }
 
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
+
+# The develop pipeline does per-pixel f32 work; without this `tauri dev` renders at opt-level 0.
+[profile.dev.package."*"]
+opt-level = 2
+debug = false

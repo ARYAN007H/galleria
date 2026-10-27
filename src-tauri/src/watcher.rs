@@ -137,4 +137,5 @@ fn push_event(buffer: &Arc<Mutex<WatchBuffer>>, event: &Event) {
 }
 
 /// Pause/resume handled via global flag in commands
+#[allow(dead_code)]
 pub fn set_watcher_paused(_paused: bool) {}

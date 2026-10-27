@@ -1111,6 +1111,11 @@ pub async fn save_edit_params(
     photo_path: String,
     params_json: String,
 ) -> Result<(), String> {
+    // Bound the blob: a compromised renderer could otherwise bloat the DB
+    // with arbitrarily large payloads. Legit develop settings stay < ~32 KB.
+    if params_json.len() > 512_000 {
+        return Err("Edit params too large".into());
+    }
     let db = state.db.lock().unwrap();
     if let Some(ref db) = *db {
         db.save_edit_params(&photo_path, &params_json)

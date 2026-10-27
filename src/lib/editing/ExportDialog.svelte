@@ -9,7 +9,7 @@
 
     const dispatch = createEventDispatcher<{ close: void }>();
 
-    let format: 'jpeg' | 'png' | 'webp' = 'jpeg';
+    let format: 'jpeg' | 'png' | 'webp' | 'tiff' = 'jpeg';
     let quality = 92;
     let maxLongEdge = 0; // 0 = original size
     let customSize = false;
@@ -46,16 +46,17 @@
         exportError = '';
 
         try {
+            // DevelopSettings payload; option keys are camelCase (Rust serde rename_all)
             const payload = toRustPayload(adjustments);
             const outputPath = getOutputPath();
 
             await invokeCommand('export_image', {
                 imagePath,
-                adjustments: payload,
+                settings: payload,
                 options: {
                     format,
                     quality,
-                    max_long_edge: actualMaxEdge,
+                    maxLongEdge: actualMaxEdge,
                 },
                 outputPath,
             });
@@ -104,11 +105,15 @@
                             <span class="format-icon">🌐</span>
                             <span>WebP</span>
                         </button>
+                        <button class="format-btn" class:active={format === 'tiff'} on:click={() => format = 'tiff'}>
+                            <span class="format-icon">🗃️</span>
+                            <span>TIFF</span>
+                        </button>
                     </div>
                 </div>
 
                 <!-- Quality (JPEG/WebP only) -->
-                {#if format !== 'png'}
+                {#if format === 'jpeg' || format === 'webp'}
                     <div class="field">
                         <label class="field-label">Quality <span class="field-value">{quality}%</span></label>
                         <input type="range" class="quality-slider" min="1" max="100" bind:value={quality} />

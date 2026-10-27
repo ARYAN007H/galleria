@@ -114,9 +114,45 @@ pub fn is_thumb_valid(thumb_path: &Path, source_mtime: u64) -> bool {
     source_mtime <= thumb_mtime
 }
 
+/// Thumbnail through the LightCraft engine: for formats the `image` crate can't
+/// decode (camera RAWs, AVIF, JXL, PSD). Decodes a small proxy and renders it with
+/// default develop settings (this display-encodes the linear scene data — never
+/// convert `load_vec` output to 8-bit directly).
+fn generate_thumbnail_engine(source_path: &str, thumb_path: &Path) -> Result<(u32, u32), String> {
+    let bytes = fs::read(source_path).map_err(|e| format!("Failed to read {}: {}", source_path, e))?;
+    let (src, info) = lightcraft_engine::files::load_vec(bytes, THUMB_SIZE as usize)
+        .map_err(|e| format!("Engine decode failed for {}: {}", source_path, e))?;
+    let req = lightcraft_pipeline::RenderRequest::fit(THUMB_SIZE as usize, THUMB_SIZE as usize);
+    let rendered = lightcraft_pipeline::render(&src, &info, &lightcraft_develop::DevelopSettings::default(), &req);
+    let img = rendered.image;
+
+    let (tw, th) = (img.width as u32, img.height as u32);
+    let enc = lightcraft_codecs::EncodeImage::rgba8(&img);
+    let jpeg = lightcraft_codecs::encode::encode_jpeg(
+        &enc,
+        THUMB_QUALITY,
+        lightcraft_codecs::encode::ChromaSubsampling::S420,
+        &lightcraft_codecs::EncodeMeta::default(),
+    )
+    .map_err(|e| format!("Thumbnail encode failed: {}", e))?;
+    fs::write(thumb_path, jpeg).map_err(|e| format!("Thumbnail write failed: {}", e))?;
+    Ok((tw, th))
+}
+
 /// Generate a thumbnail for a single file. Returns ThumbnailInfo.
 /// This function is blocking and should be called from spawn_blocking.
 fn generate_thumbnail_blocking(source_path: &str, thumb_path: &Path) -> Result<(u32, u32), String> {
+    match generate_thumbnail_standard(source_path, thumb_path) {
+        Ok(res) => Ok(res),
+        Err(standard_err) => {
+            // RAW / AVIF / JXL / PSD etc. — develop through the LightCraft engine
+            generate_thumbnail_engine(source_path, thumb_path)
+                .map_err(|engine_err| format!("{}; engine fallback: {}", standard_err, engine_err))
+        }
+    }
+}
+
+fn generate_thumbnail_standard(source_path: &str, thumb_path: &Path) -> Result<(u32, u32), String> {
     let img = image::ImageReader::open(source_path)
         .map_err(|e| format!("Failed to open image {}: {}", source_path, e))?
         .decode()

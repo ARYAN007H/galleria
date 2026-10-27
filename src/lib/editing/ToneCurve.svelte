@@ -37,6 +37,9 @@
         const w = SIZE + PAD * 2;
         const h = SIZE + PAD * 2;
         ctx.clearRect(0, 0, w, h);
+        // Dark backing: the ghost histogram and white grid assume a dark surface
+        ctx.fillStyle = '#141419';
+        ctx.fillRect(0, 0, w, h);
 
         // Background histogram ghost
         if (histogramData) {
@@ -112,6 +115,15 @@
 
     function catmullRomInterp(pts: number[][], x: number): number {
         if (pts.length < 2) return x;
+        // Two points can only be a straight line — the duplicated-endpoint
+        // Catmull-Rom below bows it off the diagonal.
+        if (pts.length === 2) {
+            const [a, b] = pts;
+            const range = b[0] - a[0];
+            if (Math.abs(range) < 0.001) return a[1];
+            const t = Math.max(0, Math.min(1, (x - a[0]) / range));
+            return a[1] + (b[1] - a[1]) * t;
+        }
         let seg = 0;
         for (let i = 0; i < pts.length - 1; i++) {
             if (x <= pts[i + 1][0]) { seg = i; break; }
@@ -233,7 +245,7 @@
         width: 100%;
         height: 100%;
         border-radius: 12px;
-        background: var(--md-sys-color-surface-container-low, rgba(0,0,0,0.3));
+        background: #141419;
         cursor: crosshair;
     }
 </style>

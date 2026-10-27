@@ -227,3 +227,95 @@ commands.allow = ["create_photo_variant", "get_photo_variants", "delete_photo_va
 identifier = "curation"
 description = "Duplicate detection"
 commands.allow = ["get_duplicate_groups", "run_phash_indexing"]
+
+# ── LightCraft develop engine commands (src/develop.rs) ──
+
+[[permission]]
+identifier = "load-editor-source"
+description = "Decode a photo into the editor's engine cache"
+commands.allow = ["load_editor_source"]
+
+[[permission]]
+identifier = "unload-editor-source"
+description = "Drop the editor's engine cache"
+commands.allow = ["unload_editor_source"]
+
+[[permission]]
+identifier = "auto-enhance"
+description = "LightCraft auto tone and white balance"
+commands.allow = ["auto_enhance"]
+
+[[permission]]
+identifier = "export-image"
+description = "Full-quality export through the develop engine"
+commands.allow = ["export_image"]
+
+[[permission]]
+identifier = "load-edit-params"
+description = "Load saved edit parameters"
+commands.allow = ["load_edit_params"]
+
+[[permission]]
+identifier = "save-edit-params"
+description = "Save edit parameters"
+commands.allow = ["save_edit_params"]
+
+[[permission]]
+identifier = "run-phash-indexing"
+description = "Compute perceptual hashes for curation"
+commands.allow = ["run_phash_indexing"]
+
+[[permission]]
+identifier = "get-duplicate-groups"
+description = "Group duplicate photos by hash distance"
+commands.allow = ["get_duplicate_groups"]
+
+[[permission]]
+identifier = "create-photo-variant"
+description = "Create a named edit variant"
+commands.allow = ["create_photo_variant"]
+
+[[permission]]
+identifier = "get-photo-variants"
+description = "List a photo's edit variants"
+commands.allow = ["get_photo_variants"]
+
+[[permission]]
+identifier = "delete-photo-variant"
+description = "Delete an edit variant"
+commands.allow = ["delete_photo_variant"]
+
+[[permission]]
+identifier = "restore-session"
+description = "Restore the last library session"
+commands.allow = ["restore_session"]
+
+[[permission]]
+identifier = "add-library-path"
+description = "Add a library root"
+commands.allow = ["add_library_path"]
+
+[[permission]]
+identifier = "remove-library-path"
+description = "Remove a library root"
+commands.allow = ["remove_library_path"]
+
+[[permission]]
+identifier = "get-library-paths"
+description = "List library roots"
+commands.allow = ["get_library_paths"]
+
+[[permission]]
+identifier = "get-all-photos"
+description = "Get all photos (paged)"
+commands.allow = ["get_all_photos"]
+
+[[permission]]
+identifier = "get-libraries"
+description = "List libraries"
+commands.allow = ["get_libraries"]
+
+[[permission]]
+identifier = "scan-default-directories"
+description = "Scan default picture directories"
+commands.allow = ["scan_default_directories"]

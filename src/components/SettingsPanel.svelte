@@ -290,8 +290,7 @@
                                 value={$appSettings.expressiveTier}
                                 on:change={(e) =>
                                     updateSettings({
-                                        expressiveTier: e.currentTarget
-                                            .value as import("../lib/store").ExpressiveTier,
+                                        expressiveTier: e.currentTarget.value,
                                         tierAutoDetected: false,
                                     })}
                             >

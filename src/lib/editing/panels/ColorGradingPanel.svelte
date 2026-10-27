@@ -9,7 +9,7 @@
 
     const dispatch = createEventDispatcher<{ change: Partial<AdjustmentState>; scrub: Partial<AdjustmentState> }>();
 
-    function onWheelChange(key: 'cgShadows' | 'cgMidtones' | 'cgHighlights', e: CustomEvent<ColorWheelState>) {
+    function onWheelChange(key: 'cgShadows' | 'cgMidtones' | 'cgHighlights' | 'cgGlobal', e: CustomEvent<ColorWheelState>) {
         dispatch('change', { [key]: e.detail });
     }
 
@@ -18,6 +18,7 @@
             cgShadows: { hue: 0, saturation: 0, luminance: 0 },
             cgMidtones: { hue: 0, saturation: 0, luminance: 0 },
             cgHighlights: { hue: 0, saturation: 0, luminance: 0 },
+            cgGlobal: { hue: 0, saturation: 0, luminance: 0 },
             cgBlending: 50,
             cgBalance: 0,
         });
@@ -43,6 +44,10 @@
                 <ColorWheel label="Shadows" value={adjustments.cgShadows} on:change={(e) => onWheelChange('cgShadows', e)} />
                 <ColorWheel label="Midtones" value={adjustments.cgMidtones} on:change={(e) => onWheelChange('cgMidtones', e)} />
                 <ColorWheel label="Highlights" value={adjustments.cgHighlights} on:change={(e) => onWheelChange('cgHighlights', e)} />
+            </div>
+
+            <div class="wheels-row" style="margin-top: 8px;">
+                <ColorWheel label="Global" value={adjustments.cgGlobal ?? { hue: 0, saturation: 0, luminance: 0 }} on:change={(e) => onWheelChange('cgGlobal', e)} />
             </div>
 
             <div class="blend-sliders">

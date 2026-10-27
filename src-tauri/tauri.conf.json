@@ -1,6 +1,6 @@
 {
     "productName": "Galleria Expressive",
-    "version": "0.14.0",
+    "version": "0.15.0",
     "identifier": "com.galleria.app",
     "build": {
         "beforeDevCommand": "npm run dev",
@@ -26,15 +26,16 @@
                 "scope": [
                     "$APP_CACHE_DIR/**",
                     "$APP_DATA_DIR/**",
+                    "$TEMP/**",
+                    "$HOME/**",
                     "$LOCALAPPDATA/galleria-expressive/**",
-                    "$HOME/.cache/galleria-expressive/**",
                     "$PICTURE/**",
                     "$DOWNLOAD/**",
                     "$DOCUMENT/**",
-                    "$HOME/Pictures/**",
-                    "$HOME/Downloads/**",
-                    "$HOME/Documents/**",
-                    "$HOME/DCIM/**"
+                    "$DESKTOP/**",
+                    "/tmp/**",
+                    "/media/**",
+                    "/mnt/**"
                 ]
             },
             "capabilities": [

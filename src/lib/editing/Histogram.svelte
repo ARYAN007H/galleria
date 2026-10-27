@@ -26,6 +26,12 @@
     function drawHistogram(d: HistogramData) {
         if (!ctx) return;
         ctx.clearRect(0, 0, width, height);
+        // Dark backing: the graph must read the same in light and dark themes
+        // (the RGB fills use 'screen' blending, which vanishes on light surfaces).
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#141419';
+        ctx.fillRect(0, 0, width, height);
 
         // Find max value for normalization (excluding extremes to avoid spike-dominated graphs)
         const allChannels = [d.r, d.g, d.b, d.l];
@@ -181,6 +187,6 @@
         width: 100%;
         height: 100px;
         border-radius: 8px;
-        background: var(--md-sys-color-surface-container-low, rgba(0,0,0,0.3));
+        background: #141419;
     }
 </style>

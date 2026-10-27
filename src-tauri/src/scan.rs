@@ -22,7 +22,8 @@ fn normalize_folder_rel(folder_rel: &str) -> String {
 
 const PHOTO_EXT: &[&str] = &[
     "jpg", "jpeg", "png", "gif", "webp", "bmp", "tiff", "tif", "heic", "heif", "raw", "arw", "cr2",
-    "nef", "dng",
+    "cr3", "nef", "dng", "orf", "rw2", "raf", "srw", "pef", "ptx", "erf", "3fr", "fff", "iiq",
+    "kdc", "mrw", "nrw", "x3f",
 ];
 const VIDEO_EXT: &[&str] = &["mp4", "mov", "avi", "mkv", "webm", "m4v", "wmv", "3gp"];
 

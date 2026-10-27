@@ -18,19 +18,19 @@
         cloneAdjustments,
     } from "../lib/editing/adjustments";
     import {
+        toDevelopSettings,
+        isDevelopSettings,
+        applyDevelopSettings,
+    } from "../lib/editing/developSettings";
+    import {
         processImage,
-        processImageFull,
         computeHistogram,
         loadEditorSource,
         unloadEditorSource,
+        autoEnhance,
+        exportImage,
         type HistogramData,
     } from "../lib/editing/imageProcessor";
-    import {
-        type CropState,
-        type DrawStroke,
-        renderStrokes,
-        canvasToBase64,
-    } from "../lib/imageProcessing";
     import { getCachedThumb } from "../lib/thumbnailCache";
     import {
         recordChange,
@@ -49,16 +49,14 @@
     let hasChanges = false;
     let imagePath = '';
     let showExport = false;
+    let isRawSource = false;
 
     // Canvas refs
     let canvasEl: HTMLCanvasElement;
     let ctx: CanvasRenderingContext2D;
-    let sourceImg: HTMLImageElement;
-    let sourceCanvas: HTMLCanvasElement;
     let imageLoaded = false;
     let imgW = 0;
     let imgH = 0;
-    let originalImageData: ImageData | null = null;
     let isProcessingPreview = false;
     let clippingCanvasEl: HTMLCanvasElement;
     let clippingCtx: CanvasRenderingContext2D;
@@ -183,45 +181,46 @@
     }
 
     // ── Image Loading ──
-    onMount(async () => {
-        if (!$selectedPhoto) return;
-        imagePath = $selectedPhoto.path;
-
-        // Cache source image in Rust for fast processing
-        await loadEditorSource(imagePath);
-
-        // Load saved edit params if any
+    // Loads saved edits for the open photo: LightCraft DevelopSettings JSON (new
+    // format) or the legacy Galleria blob, converted in place.
+    async function loadSavedEdits(path: string): Promise<boolean> {
         try {
-            const savedJson = await invokeCommand<string | null>('load_edit_params', { photoPath: imagePath });
+            const savedJson = await invokeCommand<string | null>('load_edit_params', { photoPath: path });
             if (savedJson) {
                 const saved = JSON.parse(savedJson);
-                adjustments = { ...cloneAdjustments(defaultAdjustments), ...saved };
+                if (isDevelopSettings(saved)) {
+                    adjustments = applyDevelopSettings(saved);
+                } else {
+                    adjustments = { ...cloneAdjustments(defaultAdjustments), ...saved };
+                }
                 hasChanges = true;
+                return true;
             }
         } catch (err) {
             console.warn('Could not load saved edits:', err);
         }
+        return false;
+    }
 
-        sourceImg = new Image();
-        sourceImg.crossOrigin = "anonymous";
-        sourceImg.onload = () => {
-            imgW = sourceImg.naturalWidth;
-            imgH = sourceImg.naturalHeight;
-            sourceCanvas = document.createElement("canvas");
-            sourceCanvas.width = imgW;
-            sourceCanvas.height = imgH;
-            const sctx = sourceCanvas.getContext("2d")!;
-            sctx.drawImage(sourceImg, 0, 0);
-            originalImageData = sctx.getImageData(0, 0, imgW, imgH);
-            histogramData = computeHistogram(originalImageData);
+    // Decodes the photo into the Rust-side editor cache and sizes the canvas.
+    // Everything shown on the canvas comes from the engine — RAWs included.
+    async function openPhoto(path: string) {
+        const loaded = await loadEditorSource(path);
+        if (loaded && loaded.width > 0) {
+            imgW = loaded.width;
+            imgH = loaded.height;
+            isRawSource = loaded.raw;
             initCanvas();
-        };
-        sourceImg.onerror = () => {
-            console.error("Failed to load image for editor");
+        } else {
             imageLoaded = true;
-        };
-        sourceImg.src = convertFileSource($selectedPhoto.path);
-        setTimeout(() => { if (!imageLoaded) imageLoaded = true; }, 10000);
+        }
+    }
+
+    onMount(async () => {
+        if (!$selectedPhoto) return;
+        imagePath = $selectedPhoto.path;
+        await loadSavedEdits(imagePath);
+        await openPhoto(imagePath);
     });
 
     onDestroy(() => {
@@ -231,7 +230,7 @@
 
     function initCanvas() {
         const tryInit = () => {
-            if (canvasEl && clippingCanvasEl) {
+            if (canvasEl && clippingCanvasEl && imgW > 0 && imgH > 0) {
                 canvasEl.width = imgW;
                 canvasEl.height = imgH;
                 clippingCanvasEl.width = imgW;
@@ -239,7 +238,6 @@
                 ctx = canvasEl.getContext("2d")!;
                 clippingCtx = clippingCanvasEl.getContext("2d")!;
                 imageLoaded = true;
-                ctx.drawImage(sourceCanvas, 0, 0);
                 triggerProcess(true);
             } else {
                 requestAnimationFrame(tryInit);
@@ -251,49 +249,52 @@
     // ── Processing Pipeline ──
     let processingTimeout: ReturnType<typeof setTimeout> | null = null;
 
-    async function triggerProcess(preview: boolean = true, isDrag: boolean = false) {
+    async function triggerProcess(preview: boolean = true, isDrag: boolean = false, beforeState: AdjustmentState | null = null) {
         if (!imagePath || !canvasEl || !ctx) return;
 
         // Show processing indicator after a short delay (avoid flicker on fast ops)
         if (processingTimeout) clearTimeout(processingTimeout);
         processingTimeout = setTimeout(() => { isProcessingPreview = true; }, 150);
 
-        const adj = { ...adjustments };
-        if (activeTool === 'crop') {
-            // When cropping, we need the backend to return the full uncropped image
-            // so our CSS-based CropOverlay can manipulate the bounds properly.
-            adj.cropX = 0;
-            adj.cropY = 0;
-            adj.cropWidth = 1.0;
-            adj.cropHeight = 1.0;
-            adj.cropRotation = 0;
-            // Also turn off lens distortion so crop fits precisely (optional, but good for UX)
-        }
+        const adj = beforeState ?? adjustments;
 
-        // Adaptive resolution: 600px during drag, 800px on release
-        const maxEdge = isDrag ? 600 : 800;
-        const result = await processImage(imagePath, adj, preview, maxEdge);
+        // Render at what the viewport actually shows (device pixels), not a fixed
+        // size — LightCraft's UI does the same. Drafts cap lower for cheap drags.
+        const dpr = window.devicePixelRatio || 1;
+        const viewportEdge = Math.round(Math.max(canvasClientWidth, canvasClientHeight, 300) * dpr);
+        const maxEdge = isDrag ? Math.min(viewportEdge, 900) : Math.min(viewportEdge, 1600);
+        const result = await processImage(imagePath, adj, preview, maxEdge, {
+            draft: isDrag,
+            applyCrop: activeTool !== 'crop',
+        });
 
         if (processingTimeout) { clearTimeout(processingTimeout); processingTimeout = null; }
         isProcessingPreview = false;
 
-        if (result && ctx && canvasEl && clippingCanvasEl && clippingCtx) {
-            if (result.width !== canvasEl.width || result.height !== canvasEl.height) {
+        if (result.imageData && ctx && canvasEl && clippingCanvasEl && clippingCtx) {
+            const imgData = result.imageData;
+            if (imgData.width !== canvasEl.width || imgData.height !== canvasEl.height) {
                 const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = result.width;
-                tempCanvas.height = result.height;
+                tempCanvas.width = imgData.width;
+                tempCanvas.height = imgData.height;
                 const tempCtx = tempCanvas.getContext('2d')!;
-                tempCtx.putImageData(result, 0, 0);
+                tempCtx.putImageData(imgData, 0, 0);
                 ctx.drawImage(tempCanvas, 0, 0, canvasEl.width, canvasEl.height);
-                
+
                 clippingCanvasEl.width = canvasEl.width;
                 clippingCanvasEl.height = canvasEl.height;
             } else {
-                ctx.putImageData(result, 0, 0);
+                ctx.putImageData(imgData, 0, 0);
             }
-            histogramData = computeHistogram(result);
-            if (showClippingWarnings) updateClippingWarnings(result);
+            // Use inline histogram from the render (free), fallback to JS computation
+            histogramData = result.histogram ?? computeHistogram(imgData);
+            if (showClippingWarnings) updateClippingWarnings(imgData);
         }
+    }
+
+    /** The "before" state: default settings through the same engine (cheap — StageCache). */
+    function showBefore() {
+        triggerProcess(true, false, cloneAdjustments(defaultAdjustments));
     }
 
     function updateClippingWarnings(imageData: ImageData) {
@@ -331,22 +332,6 @@
         }
     } else if (!showClippingWarnings && clippingCtx && clippingCanvasEl) {
         clippingCtx.clearRect(0, 0, clippingCanvasEl.width, clippingCanvasEl.height);
-    }
-
-    async function triggerFullRes() {
-        if (!imagePath || !canvasEl || !ctx) return;
-        const result = await processImageFull(imagePath, adjustments);
-        if (result && ctx && canvasEl && clippingCanvasEl && clippingCtx) {
-            if (result.width !== canvasEl.width || result.height !== canvasEl.height) {
-                canvasEl.width = result.width;
-                canvasEl.height = result.height;
-                clippingCanvasEl.width = result.width;
-                clippingCanvasEl.height = result.height;
-            }
-            ctx.putImageData(result, 0, 0);
-            histogramData = computeHistogram(result);
-            if (showClippingWarnings) updateClippingWarnings(result);
-        }
     }
 
     // ── Adjustment Handlers ──
@@ -393,9 +378,21 @@
 
     function onBeforeAfter(e: CustomEvent<boolean>) {
         showOriginal = e.detail;
-        if (showOriginal && originalImageData && ctx) {
-            ctx.putImageData(originalImageData, 0, 0);
+        if (showOriginal) {
+            showBefore();
         } else {
+            triggerProcess(true);
+        }
+    }
+
+    /** LightCraft Auto (scene analysis): tone + white balance as a state patch. */
+    async function handleAuto() {
+        if (!imagePath || isProcessingPreview) return;
+        const patch = await autoEnhance(imagePath, adjustments);
+        if (patch) {
+            adjustments = { ...adjustments, ...patch };
+            hasChanges = true;
+            recordChange('Auto', adjustments);
             triggerProcess(true);
         }
     }
@@ -422,23 +419,23 @@
     }
 
     async function handleSave() {
-        if (!$selectedPhoto || !canvasEl) return;
+        if (!$selectedPhoto) return;
         saving = true;
         try {
-            await triggerFullRes();
-            const base64 = canvasToBase64(canvasEl, "image/jpeg", 0.95);
-            const data = base64.split(",")[1];
             const originalPath = $selectedPhoto.path;
-            const ext = originalPath.split(".").pop() || "jpg";
-            const baseName = originalPath.replace(`.${ext}`, "");
-            const savePath = `${baseName}_edited.${ext}`;
-            await invokeCommand("save_edited_photo", { imageData: data, targetPath: savePath });
+            // Save a developed copy at the original's full resolution through the
+            // engine (re-decodes the original — never the editor proxy).
+            const ext = (originalPath.split(".").pop() || "jpg").toLowerCase();
+            const format = ext === 'png' ? 'png' : ext === 'webp' ? 'webp' : (ext === 'tif' || ext === 'tiff') ? 'tiff' : 'jpeg';
+            const baseName = originalPath.replace(/\.[^.]+$/, "");
+            const savePath = `${baseName}_edited.${format === 'jpeg' ? 'jpg' : format}`;
+            await exportImage(originalPath, adjustments, { format, quality: 95, maxLongEdge: 0 }, savePath);
 
-            // Persist edit params to DB
+            // Persist the develop settings (LightCraft JSON) for reopening
             try {
                 await invokeCommand('save_edit_params', {
                     photoPath: originalPath,
-                    paramsJson: JSON.stringify(adjustments),
+                    paramsJson: JSON.stringify(toDevelopSettings(adjustments)),
                 });
             } catch (err) { console.warn('Could not persist edit params:', err); }
 
@@ -448,14 +445,14 @@
     }
 
     // ── Filmstrip Navigation ──
-    function navigateToPhoto(photo: Photo) {
+    async function navigateToPhoto(photo: Photo) {
         if (hasChanges && !confirm("Discard unsaved changes?")) return;
 
-        // Auto-save current edit state before navigating
+        // Auto-save current edit state before navigating (LightCraft JSON)
         if (hasChanges && imagePath) {
             invokeCommand('save_edit_params', {
                 photoPath: imagePath,
-                paramsJson: JSON.stringify(adjustments),
+                paramsJson: JSON.stringify(toDevelopSettings(adjustments)),
             }).catch(() => {});
         }
 
@@ -466,35 +463,8 @@
         imagePath = photo.path;
         imageLoaded = false;
 
-        // Cache new source
-        loadEditorSource(photo.path);
-
-        // Load saved edits for the new photo
-        invokeCommand<string | null>('load_edit_params', { photoPath: photo.path })
-            .then((savedJson) => {
-                if (savedJson) {
-                    const saved = JSON.parse(savedJson);
-                    adjustments = { ...cloneAdjustments(defaultAdjustments), ...saved };
-                    hasChanges = true;
-                }
-            })
-            .catch(() => {});
-
-        sourceImg = new Image();
-        sourceImg.crossOrigin = "anonymous";
-        sourceImg.onload = () => {
-            imgW = sourceImg.naturalWidth;
-            imgH = sourceImg.naturalHeight;
-            sourceCanvas = document.createElement("canvas");
-            sourceCanvas.width = imgW;
-            sourceCanvas.height = imgH;
-            const sctx = sourceCanvas.getContext("2d")!;
-            sctx.drawImage(sourceImg, 0, 0);
-            originalImageData = sctx.getImageData(0, 0, imgW, imgH);
-            histogramData = computeHistogram(originalImageData);
-            initCanvas();
-        };
-        sourceImg.src = convertFileSource(photo.path);
+        await loadSavedEdits(photo.path);
+        await openPhoto(photo.path);
     }
 
     function nextPhoto() {
@@ -574,8 +544,12 @@
         </div>
 
         <div class="toolbar-center">
+            <button class="tool-btn" on:click={handleAuto} title="Auto tone & white balance (LightCraft scene analysis)">
+                <span>✨</span>
+                <span>Auto</span>
+            </button>
             <button class="tool-btn" class:active={showOriginal}
-                on:mousedown={() => { showOriginal = true; if (originalImageData && ctx) ctx.putImageData(originalImageData, 0, 0); }}
+                on:mousedown={() => { showOriginal = true; showBefore(); }}
                 on:mouseup={() => { showOriginal = false; triggerProcess(true); }}
                 title="Hold for before (\\)"
             >
@@ -605,16 +579,6 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 5H4c-1.1 0-1.99.9-1.99 2L2 17c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 2H5v-2h2v2zm0-3H5V8h2v2zm9 7H8v-2h8v2zm0-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z"/></svg>
             </button>
             <div class="toolbar-sep"></div>
-            <button class="tool-btn" class:active={activeTool === 'adjust'} on:click={() => switchTool('adjust')} title="Adjustments">
-                <span>≡</span>
-            </button>
-            <button class="tool-btn" class:active={activeTool === 'mask'} on:click={() => switchTool('mask')} title="Masking (Local Adjustments)">
-                <span>◎</span>
-            </button>
-            <button class="tool-btn" class:active={activeTool === 'crop'} on:click={() => switchTool('crop')} title="Crop & Straighten">
-                <span>◩</span>
-            </button>
-            <div class="toolbar-sep"></div>
             <button class="tool-btn accent" on:click={handleSave} disabled={!hasChanges || saving}>
                 {saving ? "Saving…" : "Save Copy"}
             </button>
@@ -632,6 +596,9 @@
             </button>
             <button class="strip-btn" class:active={activeTool === 'crop'} on:click={() => { activeTool = 'crop'; triggerProcess(true); }} title="Crop & Straighten">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17 15h2V7c0-1.1-.9-2-2-2H9v2h8v8zM7 17V1H5v4H1v2h4v10c0 1.1.9 2 2 2h10v4h2v-4h4v-2H7z"/></svg>
+            </button>
+            <button class="strip-btn" class:active={activeTool === 'mask'} on:click={() => { activeTool = 'mask'; triggerProcess(true); }} title="Masking (Local Adjustments)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8 0-2.48 1.13-4.7 2.9-6.17L18.17 17.1A7.945 7.945 0 0 1 12 20zm5.1-1.83L5.83 6.9A7.945 7.945 0 0 1 12 4c4.42 0 8 3.58 8 8 0 2.48-1.13 4.7-2.9 6.17z"/></svg>
             </button>
             <div class="strip-spacer"></div>
             <button class="strip-btn" class:active={showPanel} on:click={() => showPanel = !showPanel} title="Toggle panel (P)">
@@ -699,6 +666,7 @@
                             on:changeEnd={() => triggerProcess(false, false)}
                             on:addMask={(e) => {
                                 adjustments.masks = [...(adjustments.masks || []), e.detail];
+                                hasChanges = true;
                                 triggerProcess(true, true);
                             }}
                         />
@@ -706,8 +674,8 @@
                 {/if}
             </div>
 
-            <!-- Floating histogram -->
-            {#if showHistogramOverlay && histogramData}
+            <!-- Floating histogram: only while the editing panel (with its own histogram) is hidden -->
+            {#if showHistogramOverlay && histogramData && !showPanel}
                 <div class="histogram-overlay">
                     <Histogram data={histogramData} />
                 </div>
@@ -772,12 +740,12 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
         </button>
     </div>
-</div>
 
-<ExportDialog {imagePath} {adjustments} show={showExport} on:close={() => showExport = false} />
+    <!-- Export + shortcuts overlays live inside the shell so they inherit the
+         editor's pinned dark palette. -->
+    <ExportDialog {imagePath} {adjustments} show={showExport} on:close={() => showExport = false} />
 
-<!-- Keyboard Shortcuts Overlay -->
-{#if showShortcuts}
+    {#if showShortcuts}
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <!-- svelte-ignore a11y-no-static-element-interactions -->
     <div class="shortcuts-overlay" on:click={() => showShortcuts = false}>
@@ -816,6 +784,7 @@
         </div>
     </div>
 {/if}
+</div>
 
 <style>
     /* ═══ Shell ═══ */
@@ -827,6 +796,32 @@
         flex-direction: column;
         background: var(--md-sys-color-surface, #1a1a1f);
         animation: editorFadeIn 200ms cubic-bezier(0.2, 0, 0, 1);
+    }
+
+    /* The editor is a dark-surface tool (like Lightroom): pin the dark palette
+       regardless of the app theme — several editor components (MaskingPanel,
+       overlays, canvas-drawn widgets) are drawn for dark surfaces. */
+    .editor-shell {
+        --md-sys-color-primary: #A8C7FA;
+        --md-sys-color-on-primary: #062E6F;
+        --md-sys-color-primary-container: #1B4B99;
+        --md-sys-color-on-primary-container: #D3E3FD;
+        --md-sys-color-error: #FFB4AB;
+        --md-sys-color-on-error: #690005;
+        --md-sys-color-error-container: #93000A;
+        --md-sys-color-surface: #111318;
+        --md-sys-color-on-surface: #E2E2E9;
+        --md-sys-color-on-surface-variant: #C4C6D0;
+        --md-sys-color-surface-dim: #111318;
+        --md-sys-color-surface-bright: #37393E;
+        --md-sys-color-surface-container-lowest: #0C0E13;
+        --md-sys-color-surface-container-low: #191C20;
+        --md-sys-color-surface-container: #1D2024;
+        --md-sys-color-surface-container-high: #282A2F;
+        --md-sys-color-surface-container-highest: #33353A;
+        --md-sys-color-outline: #8E9099;
+        --md-sys-color-outline-variant: #44474F;
+        color-scheme: dark;
     }
 
     @keyframes editorFadeIn {
@@ -894,6 +889,8 @@
         font-weight: 500;
         cursor: pointer;
         transition: all 120ms ease;
+        white-space: nowrap;
+        flex-shrink: 0;
     }
 
     .tool-btn:hover { background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.9); }
@@ -904,14 +901,18 @@
         background: var(--md-sys-color-primary, #a0c4ff);
         color: var(--md-sys-color-on-primary, #003258);
         font-weight: 600;
-        padding: 6px 14px;
+        height: 28px;
+        padding: 0 14px;
+        border-radius: 9px;
     }
     .tool-btn.accent:hover { filter: brightness(1.1); }
     .tool-btn.accent:disabled { opacity: 0.4; }
     .tool-btn.export {
         background: rgba(255,255,255,0.08);
         color: var(--md-sys-color-primary, #a0c4ff);
-        padding: 6px 14px;
+        height: 28px;
+        padding: 0 14px;
+        border-radius: 9px;
         font-size: 12px;
         font-weight: 600;
         border: 1px solid rgba(160,196,255,0.2);
@@ -1062,12 +1063,14 @@
         left: 12px;
         background: rgba(0, 0, 0, 0.65);
         border-radius: 8px;
-        padding: 8px;
+        padding: 6px;
         z-index: 5;
         opacity: 0.85;
         transition: opacity 150ms ease;
+        transform: scale(0.8);
+        transform-origin: top left;
     }
-    .histogram-overlay:hover { opacity: 1; }
+    .histogram-overlay:hover { opacity: 1; transform: scale(0.9); }
 
     /* Zoom indicator */
     .zoom-indicator {

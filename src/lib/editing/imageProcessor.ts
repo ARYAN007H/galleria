@@ -1,15 +1,26 @@
 // ── Image Processor ──
-// Tauri invoke wrapper with single-flight coalescing and adaptive resolution pipeline
-// Uses temp file transfer with cache-busting for Tauri asset protocol
+// Tauri invoke wrapper with single-flight coalescing, on top of the LightCraft
+// develop engine. Previews travel as base64-encoded RGBA (fast path) or a temp
+// JPEG (full-res renders); drags render at draft quality, releases at full.
 
 import { invokeCommand, convertFileSource } from '../store';
-import { toRustPayload, type AdjustmentState } from './adjustments';
+import { toDevelopSettings, autoPatchToState, type DevelopSettings } from './developSettings';
+import type { AdjustmentState } from './adjustments';
 
 interface ProcessResult {
-    previewPath: string; // temp file path
+    previewPath: string; // temp file path (fallback for large images)
     width: number;
     height: number;
-    pixels: number[] | null; // raw RGBA pixel data (if available)
+    pixelsB64: string | null; // base64-encoded RGBA pixels (fast path)
+    histogram: HistogramResult | null; // inline histogram from the render
+}
+
+export interface LoadSourceResult {
+    width: number;   // proxy dimensions (what the canvas shows)
+    height: number;
+    nativeWidth: number;  // original file dimensions
+    nativeHeight: number;
+    raw: boolean;
 }
 
 export interface HistogramData {
@@ -17,6 +28,20 @@ export interface HistogramData {
     g: number[];
     b: number[];
     l: number[];
+}
+
+interface HistogramResult {
+    r: number[];
+    g: number[];
+    b: number[];
+    l: number[];
+}
+
+export interface ProcessOptions {
+    /** True while a slider is being scrubbed — draft quality (faster, slightly coarser). */
+    draft?: boolean;
+    /** False shows the uncropped frame (crop tool). Default true. */
+    applyCrop?: boolean;
 }
 
 // ── Single-Flight Coalescing State ──
@@ -27,10 +52,10 @@ export interface HistogramData {
 let isProcessing = false;
 let pendingRequest: {
     path: string;
-    adj: AdjustmentState;
-    preview: boolean;
+    settings: DevelopSettings;
     maxEdge?: number;
-    resolve: (v: ImageData | null) => void;
+    opts: ProcessOptions;
+    resolve: (v: { imageData: ImageData | null; histogram: HistogramData | null }) => void;
     reject: (e: any) => void;
 } | null = null;
 
@@ -38,12 +63,11 @@ let pendingRequest: {
 let requestVersion = 0;
 
 /**
- * Load source image into Rust cache (call once on editor open)
+ * Decode source into the Rust-side editor cache (call once per photo).
  */
-export async function loadEditorSource(imagePath: string): Promise<[number, number] | null> {
+export async function loadEditorSource(imagePath: string): Promise<LoadSourceResult | null> {
     try {
-        const result = await invokeCommand<[number, number]>('load_editor_source', { imagePath });
-        return result;
+        return await invokeCommand<LoadSourceResult>('load_editor_source', { imagePath });
     } catch (err) {
         console.error('Failed to load editor source:', err);
         return null;
@@ -51,7 +75,7 @@ export async function loadEditorSource(imagePath: string): Promise<[number, numb
 }
 
 /**
- * Unload source image from Rust cache (call on editor close)
+ * Drop the Rust-side editor cache (call on editor close).
  */
 export async function unloadEditorSource(): Promise<void> {
     try {
@@ -61,9 +85,61 @@ export async function unloadEditorSource(): Promise<void> {
     }
 }
 
+/** LightCraft Auto tone + Auto WB, returned as a UI-state patch. */
+export async function autoEnhance(
+    imagePath: string,
+    adjustments: AdjustmentState,
+): Promise<Partial<AdjustmentState> | null> {
+    try {
+        const patch = await invokeCommand<any>('auto_enhance', {
+            imagePath,
+            settings: toDevelopSettings(adjustments),
+        });
+        return patch ? autoPatchToState(patch) : null;
+    } catch (err) {
+        console.error('Auto enhance failed:', err);
+        return null;
+    }
+}
+
+/** Full-quality export through the same pipeline (re-decodes the original). */
+export async function exportImage(
+    imagePath: string,
+    adjustments: AdjustmentState,
+    options: { format: string; quality: number; maxLongEdge: number },
+    outputPath: string,
+): Promise<void> {
+    await invokeCommand('export_image', {
+        imagePath,
+        settings: toDevelopSettings(adjustments),
+        options,
+        outputPath,
+    });
+}
+
+/**
+ * Decode base64-encoded RGBA pixels into ImageData.
+ * The `fetch` data-URL path decodes base64 natively (C++) — the old per-byte
+ * `charCodeAt` loop cost tens of ms on every preview frame.
+ */
+async function base64ToImageData(b64: string, width: number, height: number): Promise<ImageData | null> {
+    try {
+        const resp = await fetch(`data:application/octet-stream;base64,${b64}`);
+        const buf = new Uint8ClampedArray(await resp.arrayBuffer());
+        const expectedLength = width * height * 4;
+        if (buf.length !== expectedLength) {
+            console.warn(`Base64 pixel length mismatch: got ${buf.length}, expected ${expectedLength}`);
+            return null;
+        }
+        return new ImageData(buf, width, height);
+    } catch (err) {
+        console.error('Failed to decode base64 pixels:', err);
+        return null;
+    }
+}
+
 /**
  * Load a temp file preview image into an ImageData for canvas rendering.
- * Uses Tauri's asset protocol with cache-busting query param.
  */
 async function loadPreviewFile(previewPath: string): Promise<ImageData | null> {
     return new Promise((resolve) => {
@@ -81,7 +157,6 @@ async function loadPreviewFile(previewPath: string): Promise<ImageData | null> {
             console.error('Failed to load preview file');
             resolve(null);
         };
-        // Use asset protocol with cache-busting
         const mapped = convertFileSource(previewPath);
         if (mapped.startsWith('data:')) {
             img.src = mapped;
@@ -92,96 +167,71 @@ async function loadPreviewFile(previewPath: string): Promise<ImageData | null> {
 }
 
 /**
- * Convert raw RGBA pixel array from Rust into ImageData directly.
- * Bypasses file I/O entirely — much faster for preview-sized images.
- */
-function pixelsToImageData(pixels: number[], width: number, height: number): ImageData | null {
-    try {
-        const expectedLength = width * height * 4;
-        if (pixels.length !== expectedLength) {
-            console.warn(`Pixel array length mismatch: got ${pixels.length}, expected ${expectedLength}`);
-            return null;
-        }
-        const data = new Uint8ClampedArray(pixels);
-        return new ImageData(data, width, height);
-    } catch (err) {
-        console.error('Failed to convert pixels to ImageData:', err);
-        return null;
-    }
-}
-
-/**
- * Core processing function — sends request to Rust backend.
- * Returns ImageData from either raw pixels (fast) or file preview (fallback).
+ * Core processing function — sends DevelopSettings to the LightCraft backend.
  */
 async function executeProcess(
     path: string,
-    adj: AdjustmentState,
-    preview: boolean,
-    maxEdge?: number,
-    version?: number,
-): Promise<ImageData | null> {
-    const payload = toRustPayload(adj);
+    settings: DevelopSettings,
+    maxEdge: number | undefined,
+    opts: ProcessOptions,
+): Promise<{ imageData: ImageData | null; histogram: HistogramData | null }> {
     try {
         const result = await invokeCommand<ProcessResult>('process_image', {
             imagePath: path,
-            adjustments: payload,
-            preview,
+            settings,
+            draft: opts.draft === true,
             maxPreviewEdge: maxEdge ?? null,
+            applyCrop: opts.applyCrop !== false,
         });
 
-        if (!result) return null;
+        if (!result || result.width === 0) return { imageData: null, histogram: null };
 
-        // Fast path: raw RGBA pixels returned directly (no file I/O)
-        if (result.pixels && result.pixels.length > 0) {
-            return pixelsToImageData(result.pixels, result.width, result.height);
+        const histogram = result.histogram ?? null;
+
+        if (result.pixelsB64 && result.pixelsB64.length > 0) {
+            const imageData = await base64ToImageData(result.pixelsB64, result.width, result.height);
+            return { imageData, histogram };
         }
 
-        // Fallback: load from temp BMP file
         if (result.previewPath) {
-            return await loadPreviewFile(result.previewPath);
+            const imageData = await loadPreviewFile(result.previewPath);
+            return { imageData, histogram };
         }
     } catch (err) {
         console.error('Image processing failed:', err);
     }
-    return null;
+    return { imageData: null, histogram: null };
 }
 
 /**
  * Process image with single-flight coalescing for fluid updates.
- * 
- * - Only one Rust invocation is in-flight at a time
- * - New requests while processing replace the pending slot (latest-wins)
- * - Superseded pending requests resolve with null
- * - When processing finishes, any pending request fires immediately
  *
  * @param path - Absolute file path to the source image
  * @param adjustments - Current adjustment state
- * @param preview - If true, process at reduced resolution
- * @param maxPreviewEdge - Adaptive preview: 600 during drag, 800 on release
+ * @param preview - If true, process at reduced resolution (600-800px); else at the proxy's size
+ * @param maxPreviewEdge - Adaptive preview edge override
+ * @param opts - draft quality (slider drag) / applyCrop (false in crop tool)
  */
 export function processImage(
     path: string,
     adjustments: AdjustmentState,
     preview: boolean = true,
     maxPreviewEdge?: number,
-): Promise<ImageData | null> {
+    opts: ProcessOptions = {},
+): Promise<{ imageData: ImageData | null; histogram: HistogramData | null }> {
     const version = ++requestVersion;
+    const settings = toDevelopSettings(adjustments);
+    const edge = preview ? maxPreviewEdge : 2816; // 2816 = the editor proxy's long edge
 
     return new Promise((resolve, reject) => {
-        // If currently processing, replace the pending request
-        // The previous pending request (if any) gets resolved with null
         if (isProcessing) {
             if (pendingRequest) {
-                // Superseded — resolve the old pending with null
-                pendingRequest.resolve(null);
+                pendingRequest.resolve({ imageData: null, histogram: null });
             }
-            pendingRequest = { path, adj: adjustments, preview, maxEdge: maxPreviewEdge, resolve, reject };
+            pendingRequest = { path, settings, maxEdge: edge, opts, resolve, reject };
             return;
         }
-
-        // Not processing — fire immediately
-        runProcess(path, adjustments, preview, maxPreviewEdge, version, resolve, reject);
+        runProcess(path, settings, edge, opts, version, resolve, reject);
     });
 }
 
@@ -190,54 +240,50 @@ export function processImage(
  */
 async function runProcess(
     path: string,
-    adj: AdjustmentState,
-    preview: boolean,
+    settings: DevelopSettings,
     maxEdge: number | undefined,
+    opts: ProcessOptions,
     version: number,
-    resolve: (v: ImageData | null) => void,
+    resolve: (v: { imageData: ImageData | null; histogram: HistogramData | null }) => void,
     reject: (e: any) => void,
 ): Promise<void> {
     isProcessing = true;
     try {
-        const imageData = await executeProcess(path, adj, preview, maxEdge, version);
-        
-        // Stale check: if a newer request has been made, discard result
+        const result = await executeProcess(path, settings, maxEdge, opts);
+
         if (version < requestVersion && pendingRequest) {
-            resolve(null);
+            resolve({ imageData: null, histogram: null });
         } else {
-            resolve(imageData);
+            resolve(result);
         }
     } catch (err) {
         reject(err);
     } finally {
         isProcessing = false;
 
-        // Drain pending: if a new request queued during processing, fire it now
         if (pendingRequest) {
             const req = pendingRequest;
             pendingRequest = null;
             const nextVersion = ++requestVersion;
-            // Use queueMicrotask for immediate but non-blocking dispatch
             queueMicrotask(() => {
-                runProcess(req.path, req.adj, req.preview, req.maxEdge, nextVersion, req.resolve, req.reject);
+                runProcess(req.path, req.settings, req.maxEdge, req.opts, nextVersion, req.resolve, req.reject);
             });
         }
     }
 }
 
 /**
- * Process at full resolution (no throttling). For final render on pointer release.
+ * Process at the proxy's full resolution. For final render on pointer release.
  */
 export async function processImageFull(
     path: string,
     adjustments: AdjustmentState,
-): Promise<ImageData | null> {
-    return executeProcess(path, adjustments, false);
+): Promise<{ imageData: ImageData | null; histogram: HistogramData | null }> {
+    return executeProcess(path, toDevelopSettings(adjustments), 2816, {});
 }
 
 /**
  * Compute histogram from ImageData (inline, no IPC needed).
- * Uses typed arrays for performance.
  */
 export function computeHistogram(imageData: ImageData): HistogramData {
     const data = imageData.data;

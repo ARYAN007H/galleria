@@ -63,6 +63,24 @@ function generateDemoPhotos(count: number): Photo[] {
 
 const demoPhotos = generateDemoPhotos(60)
 
+// Pre-warm the decoded-image cache in the background so opening the editor
+// renders instantly: the grid loads these URLs without CORS, and the editor's
+// CORS fetch would otherwise re-download (~2-3s through picsum's redirects).
+if (typeof window !== 'undefined') {
+    const warm = () => {
+        for (const p of demoPhotos) {
+            if (p.mediaType === 'photo' && /^https?:/.test(p.path)) {
+                loadImageCached(p.path).catch(() => {})
+            }
+        }
+    }
+    if ('requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(warm, { timeout: 3000 })
+    } else {
+        setTimeout(warm, 800)
+    }
+}
+
 const demoTags: Tag[] = [
     { id: 1, name: 'Nature', color: '#22c55e' },
     { id: 2, name: 'Travel', color: '#3b82f6' },
@@ -82,6 +100,27 @@ const demoLibraries: SourceDirectory[] = [
 // ── Mock invoke() ──
 
 type InvokeHandler = (args?: any) => any
+
+// Decoded demo images by URL — fetching+decoding a photo per render call is what
+// made the browser editor feel like it took seconds to draw; cache the element.
+const imageCache = new Map<string, Promise<HTMLImageElement>>()
+
+function loadImageCached(src: string): Promise<HTMLImageElement> {
+    let p = imageCache.get(src)
+    if (!p) {
+        p = new Promise<HTMLImageElement>((res, rej) => {
+            const im = new Image()
+            im.crossOrigin = 'anonymous'
+            im.onload = () => res(im)
+            im.onerror = () => rej(new Error('load failed'))
+            im.src = src
+        })
+        imageCache.set(src, p)
+        // drop the entry on failure so a retry can succeed (flaky network)
+        p.catch(() => imageCache.delete(src))
+    }
+    return p
+}
 
 const invokeHandlers: Record<string, InvokeHandler> = {
     'restore_session': () => demoLibraries.map(l => ({ id: l.id, rootPath: l.rootPath, name: l.name, photoCount: l.photoCount })),
@@ -120,46 +159,107 @@ const invokeHandlers: Record<string, InvokeHandler> = {
         const q = (args?.query || '').toLowerCase()
         return demoPhotos.filter(p => p.filename.toLowerCase().includes(q) || p.folderRel.toLowerCase().includes(q))
     },
-    'process_image': (args: any) => {
-        // Fallback Javascript pixel processor for browser testing!
-        const adj = args.adjustments;
-        const w = 600;
-        const h = 400;
+    'load_editor_source': () => ({ width: 1200, height: 800, nativeWidth: 1600, nativeHeight: 1067, raw: false }),
+    'unload_editor_source': () => null,
+    'load_edit_params': () => null,
+    'save_edit_params': () => null,
+    'auto_enhance': () => ({
+        light: { exposure: 0.25, contrast: 8, highlights: -12, shadows: 14, whites: 0, blacks: -4 },
+        color: { vibrance: 15, saturation: 0 },
+        wb: { mode: 'custom', temp: 5600, tint: 6 },
+    }),
+    'export_image': (args: any) => {
+        console.log('[TauriMock] export_image →', args?.outputPath, args?.options)
+        return null
+    },
+    'process_image': async (args: any) => {
+        // Fallback Javascript pixel processor for browser testing! Speaks the new
+        // LightCraft contract: `settings` (DevelopSettings JSON), `draft`,
+        // `maxPreviewEdge`, `applyCrop` → ProcessResult with a data-URL preview.
+        const dev = args?.settings ?? {}
+        ;(window as any).__procT0 = performance.now()
+        const light = dev.light ?? {}
+        const wb = dev.wb ?? {}
+        const color = dev.color ?? {}
+        const effects = dev.effects ?? {}
+        const draft = args?.draft === true
+        const w = draft ? 600 : 800
+        const h = Math.round(w * 2 / 3)
         const canvas = document.createElement('canvas');
         canvas.width = w;
         canvas.height = h;
         const ctx = canvas.getContext('2d')!;
-        
-        // Fill base image (placeholder gradient)
-        const lg = ctx.createLinearGradient(0, 0, w, h);
-        lg.addColorStop(0, '#4a90e2');
-        lg.addColorStop(0.5, '#50e3c2');
-        lg.addColorStop(1, '#b8e986');
-        ctx.fillStyle = lg;
-        ctx.fillRect(0, 0, w, h);
 
-        // Apply text to identify mock
-        ctx.fillStyle = 'white';
-        ctx.font = '24px sans-serif';
-        ctx.fillText('BROWSER MOCK EDITING', 40, 40);
+        // Draw the actual photo (browser mode passes an http URL); cover-fit.
+        // Falls back to the placeholder gradient if the load fails or the
+        // canvas would be tainted (CORS).
+        let drew = false
+        const src = args?.imagePath
+        if (typeof src === 'string' && /^https?:/.test(src)) {
+            try {
+                const img = await loadImageCached(src)
+                const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight)
+                const dw = img.naturalWidth * scale
+                const dh = img.naturalHeight * scale
+                ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh)
+                drew = true
+            } catch {
+                drew = false
+            }
+        }
 
-        // Get pixels
-        const idata = ctx.getImageData(0, 0, w, h);
+        if (!drew) {
+            const lg = ctx.createLinearGradient(0, 0, w, h);
+            lg.addColorStop(0, '#4a90e2');
+            lg.addColorStop(0.5, '#50e3c2');
+            lg.addColorStop(1, '#b8e986');
+            ctx.fillStyle = lg;
+            ctx.fillRect(0, 0, w, h);
+        }
+
+        // Small badge so it's clear this is the browser mock (suppress with
+        // `window.__hideMockBadge = true` for clean screenshots)
+        if (!(window as any).__hideMockBadge) {
+            ctx.fillStyle = 'rgba(0,0,0,0.45)';
+            ctx.fillRect(0, 0, 168, 24);
+            ctx.fillStyle = 'white';
+            ctx.font = '11px sans-serif';
+            ctx.fillText(drew ? 'BROWSER MOCK · ENGINE OFF' : 'BROWSER MOCK · NO PHOTO', 8, 16);
+        }
+        if (args?.applyCrop === false) {
+            ctx.fillStyle = 'rgba(0,0,0,0.45)';
+            ctx.fillRect(0, h - 24, 220, 24);
+            ctx.fillStyle = 'white';
+            ctx.fillText('uncropped frame (crop tool)', 8, h - 8);
+        }
+
+        // Get pixels — may throw on a tainted canvas; retry on the gradient
+        let idata: ImageData
+        try {
+            idata = ctx.getImageData(0, 0, w, h)
+        } catch {
+            const lg = ctx.createLinearGradient(0, 0, w, h);
+            lg.addColorStop(0, '#4a90e2');
+            lg.addColorStop(0.5, '#50e3c2');
+            lg.addColorStop(1, '#b8e986');
+            ctx.fillStyle = lg;
+            ctx.fillRect(0, 0, w, h);
+            idata = ctx.getImageData(0, 0, w, h)
+        }
         const data = idata.data;
-        
-        let exposure = adj.exposure || 0;
-        let contrast = (adj.contrast || 0) / 100.0;
-        let temp = (adj.temperature || 6500) - 6500;
-        let tempShift = temp / 20000; 
 
-        // Apply basic pixel math
+        const exposure = light.exposure || 0;
+        const contrast = (light.contrast || 0) / 100.0;
+        const temp = (wb.temp || 6500) - 6500;
+        const tempShift = temp / 20000;
+
         for (let i = 0; i < data.length; i += 4) {
              let r = data[i] / 255.0;
              let g = data[i+1] / 255.0;
              let b = data[i+2] / 255.0;
 
              // Exposure
-             let mult = Math.pow(2.0, exposure);
+             const mult = Math.pow(2.0, exposure);
              r *= mult; g *= mult; b *= mult;
 
              // Temp
@@ -168,19 +268,28 @@ const invokeHandlers: Record<string, InvokeHandler> = {
 
              // Contrast
              if (Math.abs(contrast) > 0.001) {
-                 let pivot = 0.5;
+                 const pivot = 0.5;
                  r = r > 0 ? Math.pow(r / pivot, 1.0 + contrast) * pivot : r;
                  g = g > 0 ? Math.pow(g / pivot, 1.0 + contrast) * pivot : g;
                  b = b > 0 ? Math.pow(b / pivot, 1.0 + contrast) * pivot : b;
              }
 
              // Desaturate slightly if negative sat, etc
-             let sat = (adj.saturation || 0) / 100.0;
+             const sat = (color.saturation || 0) / 100.0;
              if (sat !== 0) {
-                 let lum = 0.3*r + 0.59*g + 0.11*b;
+                 const lum = 0.3*r + 0.59*g + 0.11*b;
                  r = lum + (r - lum) * (1.0 + sat);
                  g = lum + (g - lum) * (1.0 + sat);
                  b = lum + (b - lum) * (1.0 + sat);
+             }
+
+             // Clarity stands in for the effects section (visible feedback)
+             const clarity = (effects.clarity || 0) / 100.0;
+             if (clarity !== 0) {
+                 const lum = 0.3*r + 0.59*g + 0.11*b;
+                 r = lum + (r - lum) * (1.0 + clarity * 0.5);
+                 g = lum + (g - lum) * (1.0 + clarity * 0.5);
+                 b = lum + (b - lum) * (1.0 + clarity * 0.5);
              }
 
              data[i] = Math.max(0, Math.min(255, r * 255));
@@ -193,10 +302,25 @@ const invokeHandlers: Record<string, InvokeHandler> = {
         // Convert to data URL for immediate rendering
         const url = canvas.toDataURL('image/jpeg', 0.8);
 
+        // A plausible histogram from the drawn pixels
+        const r = new Array(256).fill(0), g = new Array(256).fill(0), b = new Array(256).fill(0), l = new Array(256).fill(0);
+        for (let i = 0; i < data.length; i += 4) {
+            r[data[i]]++; g[data[i+1]]++; b[data[i+2]]++;
+            l[Math.min(255, Math.round(0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2]))]++;
+        }
+
+        // Render timing for the UI test sweep (visible in console / window.__procMs)
+        const t1 = performance.now()
+        const elapsed = Math.round(t1 - (window as any).__procT0)
+        ;(window as any).__procMs = elapsed
+        console.log(`[TauriMock] process_image (${draft ? 'draft' : 'full'}) took ${elapsed}ms (incl. image fetch on cold cache)`)
+
         return {
             previewPath: url,
             width: w,
-            height: h
+            height: h,
+            pixelsB64: null,
+            histogram: { r, g, b, l },
         };
     }
 }
@@ -204,8 +328,11 @@ const invokeHandlers: Record<string, InvokeHandler> = {
 export async function mockInvoke<T>(cmd: string, args?: any): Promise<T> {
     const handler = invokeHandlers[cmd]
     if (handler) {
-        // Simulate async delay
-        await new Promise(r => setTimeout(r, 80))
+        // Simulate async delay — skipped for processing calls (they do real work
+        // and the single-flight queue already coalesces them)
+        if (cmd !== 'process_image' && cmd !== 'load_editor_source') {
+            await new Promise(r => setTimeout(r, 80))
+        }
         return handler(args) as T
     }
     console.warn(`[TauriMock] Unhandled invoke: "${cmd}"`, args)

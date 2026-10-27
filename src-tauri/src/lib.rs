@@ -1,5 +1,5 @@
 pub mod commands;
-pub mod image_processing;
+pub mod develop;
 mod curation;
 mod db;
 mod scan;
@@ -18,7 +18,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             commands::setup_state(app.handle());
-            app.handle().manage(image_processing::EditorState::default());
+            app.handle().manage(develop::EditorState::default());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -64,13 +64,13 @@ pub fn run() {
             commands::save_edited_photo,
             commands::save_edit_params,
             commands::load_edit_params,
-            // Image processing
-            image_processing::load_editor_source,
-            image_processing::unload_editor_source,
-            image_processing::process_image,
-            image_processing::compute_histogram,
-            image_processing::auto_enhance,
-            image_processing::export_image,
+            // Image processing (LightCraft engine)
+            develop::load_editor_source,
+            develop::unload_editor_source,
+            develop::process_image,
+            develop::compute_histogram,
+            develop::auto_enhance,
+            develop::export_image,
             // Performance & streaming
             commands::scan_directory,
             commands::get_system_info,

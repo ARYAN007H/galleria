@@ -16,9 +16,41 @@
         dispatch('scrub', { [key]: e.detail });
     }
 
+    // LightCraft WbMode presets (WbMode::preset): Kelvin + tint per lighting condition.
+    const WB_PRESETS: Array<{ id: AdjustmentState['wbMode']; label: string; temp?: number; tint?: number }> = [
+        { id: 'asShot', label: 'As Shot' },
+        { id: 'daylight', label: 'Daylight', temp: 5500, tint: 10 },
+        { id: 'cloudy', label: 'Cloudy', temp: 6500, tint: 10 },
+        { id: 'shade', label: 'Shade', temp: 7500, tint: 10 },
+        { id: 'tungsten', label: 'Tungsten', temp: 2850, tint: 0 },
+        { id: 'fluorescent', label: 'Fluorescent', temp: 3800, tint: 21 },
+        { id: 'flash', label: 'Flash', temp: 5500, tint: 0 },
+    ];
+
+    function applyWbPreset(preset: typeof WB_PRESETS[number]) {
+        if (preset.id === 'asShot') {
+            dispatch('change', { wbMode: 'asShot', temperature: 6500, tint: 0 });
+        } else {
+            dispatch('change', {
+                wbMode: 'custom',
+                temperature: preset.temp ?? 6500,
+                tint: preset.tint ?? 0,
+            });
+        }
+    }
+
+    // Manual WB slider edits switch to a custom white.
+    function updateWb(key: 'temperature' | 'tint', e: CustomEvent<number>) {
+        dispatch('change', { [key]: e.detail, wbMode: 'custom' });
+    }
+
+    function scrubWb(key: 'temperature' | 'tint', e: CustomEvent<number>) {
+        dispatch('scrub', { [key]: e.detail, wbMode: 'custom' });
+    }
+
     function resetPanel() {
         dispatch('change', {
-            temperature: 6500, tint: 0, exposure: 0, contrast: 0,
+            wbMode: 'asShot', temperature: 6500, tint: 0, exposure: 0, contrast: 0,
             highlights: 0, shadows: 0, whites: 0, blacks: 0,
             texture: 0, clarity: 0, dehaze: 0, vibrance: 0, saturation: 0,
         });
@@ -36,10 +68,26 @@
     </button>
     {#if expanded}
         <div class="panel-body" transition:slide|local={{ duration: 250 }}>
+            <div class="treatment-row">
+                <button class="treatment-btn" class:active={(adjustments.treatment ?? 'color') === 'color'}
+                    on:click={() => dispatch('change', { treatment: 'color' })}>Color</button>
+                <button class="treatment-btn" class:active={adjustments.treatment === 'bw'}
+                    on:click={() => dispatch('change', { treatment: 'bw' })}>B&amp;W</button>
+            </div>
             <div class="slider-group">
                 <div class="group-label">White Balance</div>
-                <SliderRow label="Temperature" icon="🌡" value={adjustments.temperature} min={2000} max={50000} step={100} defaultValue={6500} on:change={(e) => update('temperature', e)} on:scrub={(e) => scrub('temperature', e)} />
-                <SliderRow label="Tint" icon="◆" value={adjustments.tint} min={-150} max={150} step={1} defaultValue={0} on:change={(e) => update('tint', e)} on:scrub={(e) => scrub('tint', e)} />
+                <div class="wb-presets">
+                    {#each WB_PRESETS as preset}
+                        <button
+                            class="wb-chip"
+                            class:active={(adjustments.wbMode ?? 'asShot') === preset.id
+                                || (preset.id === 'asShot' && (adjustments.wbMode ?? 'asShot') === 'asShot')}
+                            on:click={() => applyWbPreset(preset)}
+                        >{preset.label}</button>
+                    {/each}
+                </div>
+                <SliderRow label="Temperature" icon="🌡" value={adjustments.temperature} min={2000} max={50000} step={100} defaultValue={6500} on:change={(e) => updateWb('temperature', e)} on:scrub={(e) => scrubWb('temperature', e)} />
+                <SliderRow label="Tint" icon="◆" value={adjustments.tint} min={-150} max={150} step={1} defaultValue={0} on:change={(e) => updateWb('tint', e)} on:scrub={(e) => scrubWb('tint', e)} />
             </div>
             <div class="slider-group">
                 <div class="group-label">Tone</div>
@@ -147,6 +195,63 @@
 
     .slider-group {
         margin-bottom: 8px;
+    }
+
+    .treatment-row {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 10px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 10px;
+        padding: 3px;
+    }
+
+    .treatment-btn {
+        flex: 1;
+        padding: 6px 0;
+        border-radius: 8px;
+        border: none;
+        background: transparent;
+        color: rgba(255,255,255,0.5);
+        font-family: 'Instrument Sans', sans-serif;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 150ms ease;
+    }
+
+    .treatment-btn.active {
+        background: var(--md-sys-color-primary, #a0c4ff);
+        color: var(--md-sys-color-on-primary, #003258);
+    }
+
+    .wb-presets {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-bottom: 8px;
+    }
+
+    .wb-chip {
+        padding: 4px 10px;
+        border-radius: 14px;
+        background: var(--md-sys-color-surface-container-high, rgba(255,255,255,0.07));
+        border: 1px solid rgba(255,255,255,0.08);
+        color: var(--md-sys-color-on-surface-variant, rgba(255,255,255,0.6));
+        font-family: 'Instrument Sans', sans-serif;
+        font-size: 11px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 140ms ease;
+        white-space: nowrap;
+    }
+
+    .wb-chip:hover { background: rgba(255,255,255,0.12); color: var(--md-sys-color-on-surface, rgba(255,255,255,0.9)); }
+
+    .wb-chip.active {
+        background: var(--md-sys-color-primary, #a0c4ff);
+        color: var(--md-sys-color-on-primary, #003258);
+        border-color: transparent;
     }
 
     .group-label {

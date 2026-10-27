@@ -1,5 +1,3 @@
-use std::path::Path;
-
 /// 64-bit perceptual hash as 16-char hex (from 32×32 grayscale average hash).
 pub fn compute_phash_from_path(path: &str) -> Option<String> {
     let img = image::ImageReader::open(path).ok()?.decode().ok()?;

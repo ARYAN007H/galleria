@@ -2187,16 +2187,22 @@
       "description": "Permission identifier",
       "oneOf": [
         {
-          "description": "Add library path",
+          "description": "Add a library root",
           "type": "string",
           "const": "add-library-path",
-          "markdownDescription": "Add library path"
+          "markdownDescription": "Add a library root"
         },
         {
           "description": "Add to album",
           "type": "string",
           "const": "add-to-album",
           "markdownDescription": "Add to album"
+        },
+        {
+          "description": "LightCraft auto tone and white balance",
+          "type": "string",
+          "const": "auto-enhance",
+          "markdownDescription": "LightCraft auto tone and white balance"
         },
         {
           "description": "Compute histogram",
@@ -2209,6 +2215,12 @@
           "type": "string",
           "const": "create-album",
           "markdownDescription": "Create album"
+        },
+        {
+          "description": "Create a named edit variant",
+          "type": "string",
+          "const": "create-photo-variant",
+          "markdownDescription": "Create a named edit variant"
         },
         {
           "description": "Create tag",
@@ -2229,10 +2241,22 @@
           "markdownDescription": "Delete album"
         },
         {
+          "description": "Delete an edit variant",
+          "type": "string",
+          "const": "delete-photo-variant",
+          "markdownDescription": "Delete an edit variant"
+        },
+        {
           "description": "Delete tag",
           "type": "string",
           "const": "delete-tag",
           "markdownDescription": "Delete tag"
+        },
+        {
+          "description": "Full-quality export through the develop engine",
+          "type": "string",
+          "const": "export-image",
+          "markdownDescription": "Full-quality export through the develop engine"
         },
         {
           "description": "Get album photos",
@@ -2247,10 +2271,10 @@
           "markdownDescription": "Get albums"
         },
         {
-          "description": "Get all photos",
+          "description": "Get all photos (paged)",
           "type": "string",
           "const": "get-all-photos",
-          "markdownDescription": "Get all photos"
+          "markdownDescription": "Get all photos (paged)"
         },
         {
           "description": "Get categories",
@@ -2265,22 +2289,28 @@
           "markdownDescription": "Get current library path"
         },
         {
+          "description": "Group duplicate photos by hash distance",
+          "type": "string",
+          "const": "get-duplicate-groups",
+          "markdownDescription": "Group duplicate photos by hash distance"
+        },
+        {
           "description": "Get index progress",
           "type": "string",
           "const": "get-index-progress",
           "markdownDescription": "Get index progress"
         },
         {
-          "description": "Get libraries",
+          "description": "List libraries",
           "type": "string",
           "const": "get-libraries",
-          "markdownDescription": "Get libraries"
+          "markdownDescription": "List libraries"
         },
         {
-          "description": "Get library paths",
+          "description": "List library roots",
           "type": "string",
           "const": "get-library-paths",
-          "markdownDescription": "Get library paths"
+          "markdownDescription": "List library roots"
         },
         {
           "description": "Get months",
@@ -2311,6 +2341,12 @@
           "type": "string",
           "const": "get-photo-tags",
           "markdownDescription": "Get photo tags"
+        },
+        {
+          "description": "List a photo's edit variants",
+          "type": "string",
+          "const": "get-photo-variants",
+          "markdownDescription": "List a photo's edit variants"
         },
         {
           "description": "Get photos",
@@ -2355,6 +2391,18 @@
           "markdownDescription": "Hard delete photos"
         },
         {
+          "description": "Load saved edit parameters",
+          "type": "string",
+          "const": "load-edit-params",
+          "markdownDescription": "Load saved edit parameters"
+        },
+        {
+          "description": "Decode a photo into the editor's engine cache",
+          "type": "string",
+          "const": "load-editor-source",
+          "markdownDescription": "Decode a photo into the editor's engine cache"
+        },
+        {
           "description": "Photo develop variants",
           "type": "string",
           "const": "photo-variants",
@@ -2373,10 +2421,10 @@
           "markdownDescription": "Remove from album"
         },
         {
-          "description": "Remove library path",
+          "description": "Remove a library root",
           "type": "string",
           "const": "remove-library-path",
-          "markdownDescription": "Remove library path"
+          "markdownDescription": "Remove a library root"
         },
         {
           "description": "Rename album",
@@ -2397,10 +2445,22 @@
           "markdownDescription": "Restore photos"
         },
         {
-          "description": "Restore session",
+          "description": "Restore the last library session",
           "type": "string",
           "const": "restore-session",
-          "markdownDescription": "Restore session"
+          "markdownDescription": "Restore the last library session"
+        },
+        {
+          "description": "Compute perceptual hashes for curation",
+          "type": "string",
+          "const": "run-phash-indexing",
+          "markdownDescription": "Compute perceptual hashes for curation"
+        },
+        {
+          "description": "Save edit parameters",
+          "type": "string",
+          "const": "save-edit-params",
+          "markdownDescription": "Save edit parameters"
         },
         {
           "description": "Save edited photo",
@@ -2409,10 +2469,10 @@
           "markdownDescription": "Save edited photo"
         },
         {
-          "description": "Scan default directories",
+          "description": "Scan default picture directories",
           "type": "string",
           "const": "scan-default-directories",
-          "markdownDescription": "Scan default directories"
+          "markdownDescription": "Scan default picture directories"
         },
         {
           "description": "Scan directory with streaming events",
@@ -2461,6 +2521,12 @@
           "type": "string",
           "const": "toggle-favorite",
           "markdownDescription": "Toggle favorite"
+        },
+        {
+          "description": "Drop the editor's engine cache",
+          "type": "string",
+          "const": "unload-editor-source",
+          "markdownDescription": "Drop the editor's engine cache"
         },
         {
           "description": "Untag photos",
