@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en" data-palette="ocean">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=1280">
+  <title>Galleria Expressive — a Material 3 gallery &amp; RAW darkroom for the desktop</title>
+  <meta name="description" content="A fast, offline-first photo gallery and RAW darkroom for Linux, macOS & Windows. Scene-referred, GPU-rendered edits via the LightCraft engine — wrapped in Material 3 Expressive design. No cloud. No subscription.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Galleria Expressive — put your photos in a gallery">
+  <meta property="og:description" content="A Material 3 Expressive desktop gallery with a Lightroom-class, GPU-rendered RAW darkroom. Offline-first. Open source.">
+  <meta property="og:image" content="https://aryan007h.github.io/Galleria-Expressive/assets/img/og.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#08080b">
+  <link rel="icon" type="image/png" sizes="32x32" href="./assets/img/favicon-32.png">
+  <link rel="apple-touch-icon" href="./assets/img/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"></noscript>
+  <link rel="stylesheet" href="./assets/css/style.css">
+  <script>document.documentElement.classList.add('js')</script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <div id="loader" aria-hidden="true">
+    <div class="loader-inner">
+      <span class="loader-word">GALLERIA&nbsp;EXPRESSIVE</span>
+      <span class="loader-count" data-loader-count>00</span>
+    </div>
+    <div class="loader-wipe"></div>
+  </div>
+
+  <div class="cursor" aria-hidden="true">
+    <div class="cursor-dot"></div>
+    <div class="cursor-label"><span>View</span></div>
+  </div>
+
+  <div class="progress" aria-hidden="true"><i></i></div>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="nav" data-nav>
+    <a class="nav-brand" href="#top" aria-label="Galleria Expressive — back to top">
+      <img src="./assets/img/apple-touch-icon.png" alt="" width="26" height="26">
+      <span>GALLERIA<em>·</em>EXPRESSIVE</span>
+    </a>
+    <nav class="nav-links" aria-label="Sections">
+      <a href="#gallery">Gallery</a>
+      <a href="#engine">Engine</a>
+      <a href="#palettes">Palettes</a>
+      <a href="#story">Story</a>
+    </nav>
+    <div class="nav-cta">
+      <span class="nav-ver">v0.16.0</span>
+      <a class="btn btn-ghost btn-sm" href="https://github.com/ARYAN007H/Galleria-Expressive" target="_blank" rel="noopener">★ GitHub</a>
+      <button class="burger" data-burger aria-label="Open menu" aria-expanded="false"><i></i><i></i></button>
+    </div>
+  </header>
+
+  <div class="menu" data-menu aria-hidden="true">
+    <nav aria-label="Mobile">
+      <a href="#gallery" style="--i:0">Gallery</a>
+      <a href="#engine" style="--i:1">Engine</a>
+      <a href="#palettes" style="--i:2">Palettes</a>
+      <a href="#story" style="--i:3">Story</a>
+      <a href="#download" style="--i:4">Download</a>
+      <a href="https://github.com/ARYAN007H/Galleria-Expressive" target="_blank" rel="noopener" style="--i:5">GitHub ↗</a>
+    </nav>
+    <span class="menu-foot">OFFLINE-FIRST · OPEN SOURCE · M3 EXPRESSIVE</span>
+  </div>
+
+  <main id="main">
+
+    <!-- ══════════════════ HERO ══════════════════ -->
+    <section class="hero" id="top">
+      <div class="hero-glow" aria-hidden="true"></div>
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <p class="kicker reveal">MATERIAL 3 EXPRESSIVE · RUST + SVELTE · OFFLINE-FIRST</p>
+          <h1 class="hero-title">
+            <span class="ht-line"><span class="ht-solid">GALLERIA</span></span>
+            <span class="ht-line"><span class="ht-ghost">Expressive</span></span>
+          </h1>
+          <p class="hero-lede reveal" style="--d:.55s">A desktop gallery that treats your photographs like an exhibition — and edits them like a darkroom. Scene-referred, GPU-rendered, and relentlessly offline.</p>
+          <div class="hero-actions reveal" style="--d:.7s">
+            <a class="btn btn-accent" data-magnet href="https://github.com/ARYAN007H/Galleria-Expressive/releases/latest" target="_blank" rel="noopener">Download v0.16.0<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 1v12M2.5 8.5 7 13l4.5-4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+            <a class="btn btn-ghost" data-magnet href="#story">Read the story</a>
+          </div>
+          <p class="hero-meta mono reveal" style="--d:.85s">LINUX · MACOS · WINDOWS — FREE &amp; OPEN SOURCE, APACHE-2.0</p>
+        </div>
+
+        <div class="hero-stage reveal" style="--d:.4s" aria-hidden="true">
+          <figure class="hcard" style="--x:2%;  --y:6%;  --r:-7deg; --s:1;    --fd:9s"  data-cursor><img src="./assets/img/p-coast.webp"  alt="" loading="eager" width="236" height="230"></figure>
+          <figure class="hcard" style="--x:58%; --y:0%;  --r:6deg;  --s:.92;  --fd:11s" data-cursor><img src="./assets/img/p-deer.webp"   alt="" loading="eager" width="236" height="230"></figure>
+          <figure class="hcard" style="--x:-4%; --y:44%; --r:5deg;  --s:.96;  --fd:10s" data-cursor><img src="./assets/img/p-coffee.webp" alt="" loading="eager" width="236" height="230"></figure>
+          <figure class="hcard" style="--x:62%; --y:40%; --r:-5deg; --s:1.02; --fd:12s" data-cursor><img src="./assets/img/p-cactus.webp" alt="" loading="lazy" width="236" height="230"></figure>
+          <figure class="hcard hcard-front" style="--x:22%; --y:58%; --r:-2deg; --s:1.1; --fd:13s" data-cursor><img src="./assets/img/p-fox.webp" alt="" loading="eager" width="236" height="230"></figure>
+          <div class="hcard hcard-ui" style="--x:40%; --y:20%; --r:3deg; --s:.9; --fd:8s">
+            <img src="./assets/img/histogram.webp" alt="" loading="eager" width="300" height="112">
+            <span class="hcard-ui-cap mono">LIVE RGB HISTOGRAM</span>
+          </div>
+          <div class="hcard hcard-pal" style="--x:78%; --y:70%; --r:8deg; --s:.9; --fd:10.5s">
+            <span class="dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+            <span class="mono">M3 · TONAL</span>
+          </div>
+        </div>
+      </div>
+      <div class="hero-foot wrap">
+        <span class="mono scroll-cue" aria-hidden="true">SCROLL<i></i></span>
+        <span class="mono hero-foot-note">A GALLERY FOR THE PHOTOGRAPHS YOU ACTUALLY KEEP</span>
+      </div>
+    </section>
+
+    <!-- ══════════════════ MARQUEE ══════════════════ -->
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee-track">
+        <span>OFFLINE-FIRST <i>✦</i> SCENE-REFERRED <i>✦</i> 32-BIT FLOAT <i>✦</i> WGPU-RENDERED <i>✦</i> RAW NATIVE <i>✦</i> M3 EXPRESSIVE <i>✦</i> NO CLOUD <i>✦</i> XMP SIDECARS <i>✦</i> </span>
+        <span>OFFLINE-FIRST <i>✦</i> SCENE-REFERRED <i>✦</i> 32-BIT FLOAT <i>✦</i> WGPU-RENDERED <i>✦</i> RAW NATIVE <i>✦</i> M3 EXPRESSIVE <i>✦</i> NO CLOUD <i>✦</i> XMP SIDECARS <i>✦</i> </span>
+      </div>
+    </div>
+
+    <!-- ══════════════════ 01 PHILOSOPHY ══════════════════ -->
+    <section class="paper manifesto" id="philosophy">
+      <div class="wrap">
+        <p class="kicker reveal"><b>( 01 )</b> PHILOSOPHY</p>
+        <h2 class="manifesto-line" data-words>Your photographs deserve a <em>gallery</em> — not a folder of thumbnails.</h2>
+        <div class="manifesto-cols reveal">
+          <p>Galleria sweeps through your folders, reads every EXIF heartbeat and lays your archive out like an exhibition — a Tetris mosaic where every aspect ratio belongs, grouped by month, searchable by anything.</p>
+          <p class="mono manifesto-sign">NO CLOUD · NO ACCOUNTS · NO SUBSCRIPTION — IT INDEXES EVERYTHING AND PHONES NO ONE.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════ 02 GALLERY (horizontal) ══════════════════ -->
+    <section class="paper gallery-h" id="gallery">
+      <div class="wrap gallery-head">
+        <p class="kicker reveal"><b>( 02 )</b> THE GALLERY</p>
+        <h2 class="reveal">Your archive, <em>hung on a wall.</em></h2>
+      </div>
+      <div class="g-sticky" data-horizontal>
+        <div class="g-viewport">
+          <div class="g-track">
+            <article class="frame" data-cursor>
+              <div class="frame-img"><img src="./assets/img/gallery.webp" alt="Galleria's collection view: a light-themed photo grid grouped by month" loading="lazy" width="1600" height="1000"></div>
+              <figcaption><b class="mono">01 / THE COLLECTION VIEW</b><p>Sixty photos on screen at once — grouped by month, filtered by anything, real thumbnails for RAW and video alike.</p></figcaption>
+            </article>
+            <article class="frame" data-cursor>
+              <div class="frame-img mosaic" aria-label="The Tetris mosaic grid demo">
+                <i class="m m1"><img src="./assets/img/p-deer.webp"   alt="" loading="lazy"></i>
+                <i class="m m2"><img src="./assets/img/p-coffee.webp" alt="" loading="lazy"></i>
+                <i class="m m3"><img src="./assets/img/p-wall.webp"   alt="" loading="lazy"></i>
+                <i class="m m4"><img src="./assets/img/p-coast.webp"  alt="" loading="lazy"></i>
+                <i class="m m5"><img src="./assets/img/p-cactus.webp" alt="" loading="lazy"></i>
+                <i class="m m6"><img src="./assets/img/p-fox.webp"    alt="" loading="lazy"></i>
+              </div>
+              <figcaption><b class="mono">02 / THE TETRIS MOSAIC</b><p>Every aspect ratio tessellates like puzzle pieces. Hover — it's cinematic.</p></figcaption>
+            </article>
+            <article class="frame frame-slim">
+              <div class="frame-img frame-filters">
+                <b class="ff-count mono">11 <span>PHOTOS</span></b>
+                <div class="ff-chips">
+                  <span class="chip on">September 2026</span>
+                  <span class="chip">Favourites ♥</span>
+                  <span class="chip">Videos ▶</span>
+                  <span class="chip">RAW</span>
+                  <span class="chip">Albums</span>
+                  <span class="chip">This Month</span>
+                </div>
+                <p class="ff-note">Find exactly what you need — by year, month, folder or media type. The keyboard is a first-class citizen.</p>
+              </div>
+              <figcaption><b class="mono">03 / SMART FILTERING</b><p>Search that reads EXIF, not the cloud.</p></figcaption>
+            </article>
+            <article class="frame" data-cursor>
+              <div class="frame-img duo">
+                <img src="./assets/img/p-wall.webp" alt="" loading="lazy">
+                <img src="./assets/img/p-deer.webp" alt="" loading="lazy">
+              </div>
+              <figcaption><b class="mono">04 / ALBUMS &amp; FAVOURITES</b><p>Group the keepers, heart the best ones, find them forever.</p></figcaption>
+            </article>
+          </div>
+          <div class="g-ui">
+            <span class="mono g-count"><b data-g-now>01</b> / 04</span>
+            <span class="g-bar" aria-hidden="true"><i data-g-bar></i></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════ 03 THE DEVELOP ENGINE ══════════════════ -->
+    <section class="ink darkroom" id="engine">
+      <div class="wrap">
+        <p class="kicker reveal"><b>( 03 )</b> THE DEVELOP ENGINE</p>
+        <h2 class="reveal">A Lightroom-class darkroom, <em>rendered on your GPU.</em></h2>
+        <p class="section-sub reveal">As of v0.15, edits run on <a href="https://github.com/storytold/lightcraft" target="_blank" rel="noopener">LightCraft</a> — an open-source, scene-referred develop engine. Every slider is 32-bit float maths in wide-gamut colour, pushed through <b>wgpu</b> and saved as settings. Your pixels stay yours.</p>
+
+        <div class="dr-grid">
+          <figure class="ba reveal" data-ba data-cursor style="--cut:55%">
+            <div class="ba-after"><img src="./assets/img/editor.webp" alt="Galleria's develop module showing a developed mountain landscape with the editing rail" loading="lazy" width="1600" height="1000"></div>
+            <div class="ba-before"><img src="./assets/img/editor.webp" alt="" aria-hidden="true" loading="lazy" width="1600" height="1000"></div>
+            <span class="ba-tag ba-tag-l mono">STRAIGHT OUT OF CAMERA</span>
+            <span class="ba-tag ba-tag-r mono">DEVELOPED IN GALLERIA</span>
+            <span class="ba-handle" aria-hidden="true"><i></i></span>
+            <input class="ba-range" type="range" min="0" max="100" value="55" step="0.5" aria-label="Compare before and after edit">
+            <figcaption class="mono">INTERACTIVE — DRAG TO COMPARE <i>·</i> ILLUSTRATIVE DEMO</figcaption>
+          </figure>
+
+          <ol class="features reveal">
+            <li><b class="mono">01</b><div><h3>Non-destructive by heart</h3><p>Every edit is metadata — exposure, tone curves, the 8-band colour mixer, grading wheels, grain. Undo forever, snapshot anywhere, originals untouched.</p></div></li>
+            <li><b class="mono">02</b><div><h3>RAW, natively</h3><p>DNG, CR2/CR3, NEF, ARW, RAF, ORF, RW2 and friends — demosaiced decodes, not JPEG stand-ins, with real RAW thumbnails in the gallery.</p></div></li>
+            <li><b class="mono">03</b><div><h3>Colour, properly</h3><p>A linear Rec.2020 → OkLCh pipeline: Kelvin white balance, point &amp; parametric curves, one-click auto tone from scene analysis.</p></div></li>
+            <li><b class="mono">04</b><div><h3>Local light</h3><p>Paint masks where they matter — lift a face, warm a skyline — without touching the rest of the frame.</p></div></li>
+            <li><b class="mono">05</b><div><h3>XMP that travels</h3><p>Ratings, flags and develop settings live in XMP sidecars, so your edits ride along with the file — even outside Galleria.</p></div></li>
+            <li><b class="mono">06</b><div><h3>One engine out</h3><p>Export JPEG, PNG, WebP or TIFF at full resolution through the same pipeline — written beside the original, never over it.</p></div></li>
+          </ol>
+        </div>
+
+        <div class="dr-low">
+          <figure class="grading-card reveal" data-cursor>
+            <img src="./assets/img/grading.webp" alt="Galleria's colour grading panel with shadows, midtones, highlights and global colour wheels" loading="lazy" width="1600" height="1000">
+            <figcaption class="mono">THREE-WAY COLOUR GRADING — SHADOWS · MIDTONES · HIGHLIGHTS · GLOBAL</figcaption>
+          </figure>
+          <ul class="chips-row reveal" aria-label="Engine facts">
+            <li class="chip">wgpu — VULKAN · METAL · DX12</li>
+            <li class="chip">32-BIT FLOAT · SCENE-REFERRED</li>
+            <li class="chip">LINEAR REC.2020 → OKLCH</li>
+            <li class="chip">CPU FALLBACK INCLUDED</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════ 04 PALETTES ══════════════════ -->
+    <section class="ink palettes" id="palettes">
+      <div class="wrap">
+        <p class="kicker reveal"><b>( 04 )</b> MATERIAL 3 EXPRESSIVE</p>
+        <h2 class="reveal">Five moods. Pick one — <em>the page re-paints.</em></h2>
+        <p class="section-sub reveal">The app ships five tonal palettes across true dark and light modes. So does this site: tap a swatch and watch the whole page re-theme itself, exactly like the app does.</p>
+
+        <div class="pal-row reveal" role="group" aria-label="Choose a palette">
+          <button class="pal" data-pal="ocean"    aria-pressed="true"><i style="--c:#8ab4ff"></i><span>Ocean</span><em class="mono">DEFAULT</em></button>
+          <button class="pal" data-pal="lavender" aria-pressed="false"><i style="--c:#cfc0ff"></i><span>Lavender</span><em class="mono">SOFT</em></button>
+          <button class="pal" data-pal="mauve"    aria-pressed="false"><i style="--c:#f2b8d5"></i><span>Mauve</span><em class="mono">DUSK</em></button>
+          <button class="pal" data-pal="sage"     aria-pressed="false"><i style="--c:#bcd9b4"></i><span>Sage</span><em class="mono">CALM</em></button>
+          <button class="pal" data-pal="coral"    aria-pressed="false"><i style="--c:#ffb59e"></i><span>Coral</span><em class="mono">WARM</em></button>
+        </div>
+
+        <div class="ramp reveal" data-ramp aria-hidden="true">
+          <i style="--mix:color-mix(in oklab, var(--accent) 92%, white)"><span>T90</span></i>
+          <i style="--mix:color-mix(in oklab, var(--accent) 70%, white)"><span>T70</span></i>
+          <i style="--mix:var(--accent)"><span>T50</span></i>
+          <i style="--mix:color-mix(in oklab, var(--accent-2) 72%, black)"><span>T30</span></i>
+          <i style="--mix:color-mix(in oklab, var(--accent-2) 45%, black)"><span>T15</span></i>
+        </div>
+        <p class="mono ramp-note reveal">DYNAMIC TONAL PALETTES — BUILT ON M3 COLOUR ROLES · TRUE DARK &amp; LIGHT IN THE APP</p>
+      </div>
+    </section>
+
+    <!-- ══════════════════ STATS ══════════════════ -->
+    <section class="ink stats-band">
+      <div class="wrap stats" data-stats>
+        <div class="stat reveal"><b data-count="0">0</b><span>cloud requests, ever</span></div>
+        <div class="stat reveal"><b data-count="32" data-suffix="-bit">0</b><span>float pipeline, scene-referred</span></div>
+        <div class="stat reveal"><b data-count="5">0</b><span>tonal palettes</span></div>
+        <div class="stat reveal"><b data-count="8" data-suffix="+">0</b><span>RAW formats demosaiced</span></div>
+      </div>
+    </section>
+
+    <!-- ══════════════════ 05 STORY ══════════════════ -->
+    <section class="paper story" id="story">
+      <div class="wrap">
+        <p class="kicker reveal"><b>( 05 )</b> THE STORY</p>
+        <blockquote class="pull reveal">
+          <p>“The main focus of this project was to <em>learn</em>.”</p>
+          <cite class="mono">— THE ARCHITECT, ON WHY GALLERIA EXISTS</cite>
+        </blockquote>
+        <div class="story-cols reveal">
+          <p>Galleria began as a student's question: can a local Linux app feel as fluid and cinematic as the modern web? The answer became a playground — Svelte 4's fine-grained reactivity (migrated from React, cutting the bundle by 83%), Rust's memory-safe systems programming behind a Tauri shell, and Material 3 Expressive as a design thesis.</p>
+          <p>AI drafts the code. A human reads every line, architects the system and ships the release — the education is the point. The latest milestone: XMP sidecar interop, a domain-store refactor and an accessibility baseline of zero warnings.</p>
+        </div>
+        <ul class="chips-row chips-dark reveal" aria-label="Project facts">
+          <li class="chip">REACT → SVELTE</li>
+          <li class="chip">−83% BUNDLE</li>
+          <li class="chip">0 A11Y WARNINGS</li>
+          <li class="chip">APACHE-2.0</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ══════════════════ DOWNLOAD ══════════════════ -->
+    <section class="ink cta" id="download">
+      <div class="hero-glow" aria-hidden="true"></div>
+      <div class="wrap">
+        <p class="kicker reveal">FREE &amp; OPEN SOURCE</p>
+        <h2 class="cta-title reveal">Put your photos<br><em>in a gallery.</em></h2>
+        <div class="hero-actions reveal">
+          <a class="btn btn-accent btn-big" data-magnet href="https://github.com/ARYAN007H/Galleria-Expressive/releases/latest" target="_blank" rel="noopener">Download v0.16.0<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 1v12M2.5 8.5 7 13l4.5-4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+          <a class="btn btn-ghost btn-big" data-magnet href="https://github.com/ARYAN007H/Galleria-Expressive" target="_blank" rel="noopener">★ Star on GitHub</a>
+        </div>
+        <p class="mono cta-meta reveal">LINUX · MACOS (INTEL &amp; APPLE SILICON) · WINDOWS — NO ACCOUNT REQUIRED</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- ══════════════════ FOOTER ══════════════════ -->
+  <footer class="ink footer">
+    <div class="wrap">
+      <div class="foot-grid">
+        <div class="foot-col">
+          <h4 class="mono">PROJECT</h4>
+          <a href="https://github.com/ARYAN007H/Galleria-Expressive" target="_blank" rel="noopener">Source code ↗</a>
+          <a href="https://github.com/ARYAN007H/Galleria-Expressive/releases/latest" target="_blank" rel="noopener">Releases ↗</a>
+          <a href="https://github.com/ARYAN007H/Galleria-Expressive/blob/main/vision.md" target="_blank" rel="noopener">Vision &amp; roadmap ↗</a>
+          <a href="https://github.com/ARYAN007H/Galleria-Expressive/blob/main/LICENSE" target="_blank" rel="noopener">Apache-2.0 license ↗</a>
+        </div>
+        <div class="foot-col">
+          <h4 class="mono">THE ENGINE</h4>
+          <a href="https://github.com/storytold/lightcraft" target="_blank" rel="noopener">LightCraft ↗</a>
+          <span class="foot-dim">Scene-referred · GPU-rendered</span>
+        </div>
+        <div class="foot-col">
+          <h4 class="mono">COLOPHON</h4>
+          <span class="foot-dim">Set in Fraunces &amp; Space Grotesk</span>
+          <span class="foot-dim">Rust · Tauri · Svelte · wgpu</span>
+          <span class="foot-dim">No trackers. No cookies. No cloud.</span>
+        </div>
+        <div class="foot-col">
+          <h4 class="mono">LOCAL TIME</h4>
+          <span class="foot-clock" data-clock>—:—</span>
+          <span class="foot-dim mono">THE DARKROOM IS ALWAYS OPEN</span>
+        </div>
+      </div>
+      <p class="foot-mark" aria-hidden="true">GALLERIA</p>
+      <div class="foot-base mono">
+        <span>© <span data-year>2026</span> ARYAN — AI DRAFTED IT, A HUMAN MADE IT ART</span>
+        <a href="#top" class="to-top">BACK TO TOP ↑</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="./assets/js/main.js" defer></script>
+</body>
+</html>
