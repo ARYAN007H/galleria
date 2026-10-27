@@ -5,7 +5,8 @@
     export let cropY: number;
     export let cropWidth: number;
     export let cropHeight: number;
-    export let cropRotation: number = 0;
+    // Rotation is applied by the engine; kept as a read-only reference for consumers.
+    export const cropRotation: number = 0;
     export let previewWidth: number = 0;
     export let previewHeight: number = 0;
 

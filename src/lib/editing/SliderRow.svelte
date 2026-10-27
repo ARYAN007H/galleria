@@ -84,7 +84,7 @@
         <span class="slider-name">{label}</span>
     </div>
     <div class="slider-control">
-        <div class="slider-track-wrapper" on:dblclick={handleDblClick}>
+        <div class="slider-track-wrapper">
             {#if showBubble}
                 <div class="value-bubble" style="left: {progress}%">
                     {Math.round(value * 100) / 100}
@@ -96,6 +96,7 @@
                 {max}
                 {step}
                 bind:value
+                on:dblclick={handleDblClick}
                 on:input={handleInput}
                 on:pointerdown={handlePointerDown}
                 on:pointerup={handlePointerUp}

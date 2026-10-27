@@ -853,8 +853,8 @@
         transition: opacity var(--duration-base) var(--ease-standard);
     }
 
-    .photo-card.img-loaded .placeholder,
-    .mosaic-photo.img-loaded .placeholder,
+    .photo-card:global(.img-loaded) .placeholder,
+    .mosaic-photo:global(.img-loaded) .placeholder,
     :global(.mosaic-photo .lazy-photo[src]:not([src=""])) ~ .placeholder {
         opacity: 0;
         pointer-events: none;
@@ -1084,7 +1084,7 @@
         transition: opacity 0.3s var(--ease-emphasized-decel);
     }
 
-    .mosaic-photo.img-loaded :global(.lazy-photo),
+    .mosaic-photo:global(.img-loaded) :global(.lazy-photo),
     .mosaic-photo :global(.lazy-photo[src]:not([src=""])) {
         opacity: 1;
     }

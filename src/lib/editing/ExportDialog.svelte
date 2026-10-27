@@ -80,8 +80,14 @@
 </script>
 
 {#if show}
+    <!-- The backdrop click is a pointer convenience; keyboard users have
+         Escape (below) and the Cancel button. -->
     <!-- svelte-ignore a11y-click-events-have-key-events -->
-    <div class="export-backdrop" on:click={handleBackdrop} role="dialog">
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
+    <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+    <div class="export-backdrop" on:click={handleBackdrop} role="dialog" aria-modal="true"
+        aria-label="Export photo"
+        on:keydown={(e) => { if (e.key === 'Escape') handleClose(); }}>
         <div class="export-dialog">
             <div class="dialog-header">
                 <h3>Export Photo</h3>
@@ -91,8 +97,8 @@
             <div class="dialog-body">
                 <!-- Format -->
                 <div class="field">
-                    <label class="field-label">Format</label>
-                    <div class="format-options">
+                    <span class="field-label" id="export-format-label">Format</span>
+                    <div class="format-options" role="group" aria-labelledby="export-format-label">
                         <button class="format-btn" class:active={format === 'jpeg'} on:click={() => format = 'jpeg'}>
                             <span class="format-icon">📸</span>
                             <span>JPEG</span>
@@ -115,8 +121,8 @@
                 <!-- Quality (JPEG/WebP only) -->
                 {#if format === 'jpeg' || format === 'webp'}
                     <div class="field">
-                        <label class="field-label">Quality <span class="field-value">{quality}%</span></label>
-                        <input type="range" class="quality-slider" min="1" max="100" bind:value={quality} />
+                        <label class="field-label" for="export-quality">Quality <span class="field-value">{quality}%</span></label>
+                        <input id="export-quality" type="range" class="quality-slider" min="1" max="100" bind:value={quality} />
                         <div class="quality-labels">
                             <span>Smaller</span>
                             <span>Better</span>
@@ -126,8 +132,8 @@
 
                 <!-- Size -->
                 <div class="field">
-                    <label class="field-label">Size</label>
-                    <div class="size-grid">
+                    <span class="field-label" id="export-size-label">Size</span>
+                    <div class="size-grid" role="group" aria-labelledby="export-size-label">
                         {#each sizePresets as preset}
                             <button
                                 class="size-btn"
@@ -148,6 +154,8 @@
                     {#if customSize}
                         <div class="custom-size-row">
                             <input
+                                id="export-custom-size"
+                                aria-label="Custom size in pixels"
                                 type="number"
                                 class="custom-input"
                                 bind:value={customSizeValue}
@@ -161,7 +169,7 @@
 
                 <!-- Output path preview -->
                 <div class="field">
-                    <label class="field-label">Output</label>
+                    <span class="field-label">Output</span>
                     <div class="output-path">{getOutputPath()}</div>
                 </div>
 
@@ -284,12 +292,14 @@
     .quality-slider {
         width: 100%;
         height: 4px;
+        appearance: none;
         -webkit-appearance: none;
         background: rgba(255,255,255,0.1);
         border-radius: 2px;
         outline: none;
     }
     .quality-slider::-webkit-slider-thumb {
+        appearance: none;
         -webkit-appearance: none;
         width: 16px; height: 16px;
         border-radius: 50%;

@@ -16,6 +16,12 @@
     import { convertFileSource } from "../lib/store";
     import type { Album } from "../lib/store";
 
+    /** Focus an element when it appears (transient inline editors). */
+    function focusOnMount(node: HTMLElement) {
+        node.focus();
+    }
+
+
     let isCreating = false;
     let newAlbumName = "";
     let editingId: number | null = null;
@@ -108,7 +114,7 @@
                         newAlbumName = "";
                     }
                 }}
-                autofocus
+                use:focusOnMount
             />
             <button
                 class="create-confirm"
@@ -183,7 +189,7 @@
                                 }}
                                 on:blur={finishRename}
                                 on:click|stopPropagation
-                                autofocus
+                                use:focusOnMount
                             />
                         {:else}
                             <span class="album-name">{album.name}</span>

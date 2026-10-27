@@ -7,7 +7,8 @@
 
     export let photo: Photo;
     export let selected: boolean = false;
-    export let size: number = 200;
+    // Display hint for consumers; rendering sizes itself via CSS.
+    export const size: number = 200;
 
     let src = '';
     let loaded = false;
