@@ -68,6 +68,8 @@
     "get-photo-locations",
     "search-with-facets",
     "photo-variants",
-    "curation"
+    "curation",
+    "write-xmp-sidecar",
+    "read-xmp-sidecar"
   ]
 }

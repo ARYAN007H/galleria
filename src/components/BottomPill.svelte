@@ -19,6 +19,7 @@
         id: SidebarSection;
         label: string;
         icon: string;
+        badge?: boolean;
     };
 
     const items: PillItem[] = [

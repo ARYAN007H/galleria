@@ -181,9 +181,20 @@
     }
 
     // ── Image Loading ──
-    // Loads saved edits for the open photo: LightCraft DevelopSettings JSON (new
-    // format) or the legacy Galleria blob, converted in place.
+    // Loads saved edits for the open photo: the XMP sidecar next to the file
+    // wins (edits travel with the photo and stay editable in LightCraft /
+    // Lightroom Classic), then the DB's LightCraft JSON, then the legacy blob.
     async function loadSavedEdits(path: string): Promise<boolean> {
+        try {
+            const xmp = await invokeCommand<unknown>('read_xmp_sidecar', { photoPath: path }).catch(() => null);
+            if (xmp && typeof xmp === 'object') {
+                adjustments = applyDevelopSettings(xmp as any);
+                hasChanges = true;
+                return true;
+            }
+        } catch (err) {
+            console.warn('Could not read XMP sidecar:', err);
+        }
         try {
             const savedJson = await invokeCommand<string | null>('load_edit_params', { photoPath: path });
             if (savedJson) {
@@ -431,12 +442,18 @@
             const savePath = `${baseName}_edited.${format === 'jpeg' ? 'jpg' : format}`;
             await exportImage(originalPath, adjustments, { format, quality: 95, maxLongEdge: 0 }, savePath);
 
-            // Persist the develop settings (LightCraft JSON) for reopening
+            // Persist the develop settings: DB blob + XMP sidecar next to the
+            // file (sidecar wins on load, and LightCraft/Lightroom can read it)
             try {
+                const dev = JSON.stringify(toDevelopSettings(adjustments));
                 await invokeCommand('save_edit_params', {
                     photoPath: originalPath,
-                    paramsJson: JSON.stringify(toDevelopSettings(adjustments)),
+                    paramsJson: dev,
                 });
+                await invokeCommand('write_xmp_sidecar', {
+                    photoPath: originalPath,
+                    settings: toDevelopSettings(adjustments),
+                }).catch((err) => console.warn('Sidecar write skipped:', err));
             } catch (err) { console.warn('Could not persist edit params:', err); }
 
             onClose();
@@ -448,12 +465,14 @@
     async function navigateToPhoto(photo: Photo) {
         if (hasChanges && !confirm("Discard unsaved changes?")) return;
 
-        // Auto-save current edit state before navigating (LightCraft JSON)
+        // Auto-save current edit state before navigating (DB blob + XMP sidecar)
         if (hasChanges && imagePath) {
+            const dev = toDevelopSettings(adjustments);
             invokeCommand('save_edit_params', {
                 photoPath: imagePath,
-                paramsJson: JSON.stringify(toDevelopSettings(adjustments)),
+                paramsJson: JSON.stringify(dev),
             }).catch(() => {});
+            invokeCommand('write_xmp_sidecar', { photoPath: imagePath, settings: dev }).catch(() => {});
         }
 
         selectedPhoto.set(photo);

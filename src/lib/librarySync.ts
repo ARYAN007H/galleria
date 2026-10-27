@@ -1,7 +1,8 @@
 /**
  * Living Library — single listener for batched FS changes from Rust.
  */
-import { get, photos, totalPhotoCount } from './store'
+import { get } from 'svelte/store'
+import { photos, totalPhotoCount } from './store'
 import type { Photo } from './store'
 import { isTauri } from './tauriMock'
 

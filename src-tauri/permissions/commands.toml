@@ -319,3 +319,13 @@ commands.allow = ["get_libraries"]
 identifier = "scan-default-directories"
 description = "Scan default picture directories"
 commands.allow = ["scan_default_directories"]
+
+[[permission]]
+identifier = "write-xmp-sidecar"
+description = "Write the photo's develop settings to an XMP sidecar"
+commands.allow = ["write_xmp_sidecar"]
+
+[[permission]]
+identifier = "read-xmp-sidecar"
+description = "Read develop settings from the photo's XMP sidecar"
+commands.allow = ["read_xmp_sidecar"]

@@ -2415,6 +2415,12 @@
           "markdownDescription": "Process image"
         },
         {
+          "description": "Read develop settings from the photo's XMP sidecar",
+          "type": "string",
+          "const": "read-xmp-sidecar",
+          "markdownDescription": "Read develop settings from the photo's XMP sidecar"
+        },
+        {
           "description": "Remove from album",
           "type": "string",
           "const": "remove-from-album",
@@ -2533,6 +2539,12 @@
           "type": "string",
           "const": "untag-photos",
           "markdownDescription": "Untag photos"
+        },
+        {
+          "description": "Write the photo's develop settings to an XMP sidecar",
+          "type": "string",
+          "const": "write-xmp-sidecar",
+          "markdownDescription": "Write the photo's develop settings to an XMP sidecar"
         },
         {
           "description": "Default core plugins set.\n#### This default permission set includes:\n\n- `core:path:default`\n- `core:event:default`\n- `core:window:default`\n- `core:webview:default`\n- `core:app:default`\n- `core:image:default`\n- `core:resources:default`\n- `core:menu:default`\n- `core:tray:default`",

@@ -71,6 +71,8 @@ pub fn run() {
             develop::compute_histogram,
             develop::auto_enhance,
             develop::export_image,
+            develop::write_xmp_sidecar,
+            develop::read_xmp_sidecar,
             // Performance & streaming
             commands::scan_directory,
             commands::get_system_info,

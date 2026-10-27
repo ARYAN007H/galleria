@@ -389,6 +389,69 @@ pub async fn export_image(
     .map_err(|e| format!("Export error: {e}"))?
 }
 
+// ── XMP sidecar interop ──
+// Edits are written as a LightCraft-compatible XMP sidecar (`<photo>.xmp`,
+// develop settings embedded as `lc:settings` JSON) so a Galleria edit opens in
+// LightCraft — and, for the standard develop fields LightCraft maps, in
+// Lightroom Classic. On open, a sidecar present next to the photo wins over
+// the DB blob, so edits travel with the file.
+
+/// Build the sidecar's `lc` settings payload exactly as LightCraft writes it.
+fn xmp_lc_settings(s: &DevelopSettings) -> String {
+    serde_json::to_string(s).unwrap_or_default()
+}
+
+#[tauri::command]
+pub async fn write_xmp_sidecar(photo_path: String, settings: serde_json::Value) -> Result<(), String> {
+    tokio::task::spawn_blocking(move || {
+        let s = parse_settings(&settings)?;
+        let meta = lightcraft_meta::Metadata::default();
+        let settings_json = xmp_lc_settings(&s);
+        let lc = vec![
+            ("settings", settings_json.as_str()),
+            ("flag", "none"),
+        ];
+        let packet = lightcraft_meta::write_xmp_lc(&meta, &lc);
+        let sidecar = lightcraft_engine::sidecar::sidecar_path(&photo_path, lightcraft_engine::sidecar::SidecarNaming::default());
+        std::fs::write(&sidecar, packet).map_err(|e| format!("Failed to write sidecar: {e}"))?;
+        Ok(())
+    })
+    .await
+    .map_err(|e| format!("Sidecar error: {e}"))?
+}
+
+/// The develop settings stored in the photo's XMP sidecar, if one exists.
+#[tauri::command]
+pub async fn read_xmp_sidecar(photo_path: String) -> Result<Option<serde_json::Value>, String> {
+    tokio::task::spawn_blocking(move || {
+        use lightcraft_engine::crs::Target;
+        let Some(path) = lightcraft_engine::sidecar::find_sidecar(&photo_path, lightcraft_engine::sidecar::SidecarNaming::default())
+        else {
+            return Ok(None);
+        };
+        let xmp = std::fs::read_to_string(&path).map_err(|e| format!("Failed to read sidecar: {e}"))?;
+        let sc = lightcraft_engine::sidecar::parse_sidecar(&xmp, Target::Any).map_err(|e| format!("Bad sidecar: {e}"))?;
+        // merge_into needs a Photo; build the minimal one through serde (every
+        // other field has a serde default in the catalog model).
+        let mut photo: lightcraft_catalog::Photo = serde_json::from_value(serde_json::json!({
+            "id": 0,
+            "source": { "type": "file", "path": "" },
+            "file_name": "",
+            "format": "",
+            "develop": {},
+            "width": 0,
+            "height": 0,
+            "imported": ""
+        }))
+        .map_err(|e| format!("Sidecar merge failed: {e}"))?;
+        lightcraft_engine::sidecar::merge_into(&mut photo, &sc, "");
+        let settings = serde_json::to_value(&*photo.develop).map_err(|e| e.to_string())?;
+        Ok(Some(settings))
+    })
+    .await
+    .map_err(|e| format!("Sidecar error: {e}"))?
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -637,5 +700,47 @@ mod tests {
         println!("12 MP export: decode {decode_ms} ms ({jpg_len} B file) → render {render_ms} ms → encode {encode_ms} ms ({} KB out)",
             bytes.len() / 1024);
         assert_eq!(out.width, w);
+    }
+
+    /// XMP sidecar round trip: write develop settings the way LightCraft does,
+    /// then read them back through LightCraft's own parser.
+    #[test]
+    fn xmp_sidecar_round_trip() {
+        let mut s = DevelopSettings::default();
+        s.light.exposure = 0.7;
+        s.light.contrast = 22.0;
+        s.wb.temp = 3200.0;
+
+        let meta = lightcraft_meta::Metadata::default();
+        let settings_json = xmp_lc_settings(&s);
+        let packet = lightcraft_meta::write_xmp_lc(&meta, &[
+            ("settings", settings_json.as_str()),
+            ("flag", "none"),
+        ]);
+        assert!(packet.contains("lc:settings"));
+
+        let sc = lightcraft_engine::sidecar::parse_sidecar(
+            &packet,
+            lightcraft_engine::crs::Target::Any,
+        )
+        .expect("parse sidecar");
+        let mut photo: lightcraft_catalog::Photo = serde_json::from_value(serde_json::json!({
+            "id": 0,
+            "source": { "type": "file", "path": "" },
+            "file_name": "",
+            "format": "",
+            "develop": {},
+            "width": 0,
+            "height": 0,
+            "imported": ""
+        }))
+        .expect("minimal photo");
+        lightcraft_engine::sidecar::merge_into(&mut photo, &sc, "");
+        let back: DevelopSettings = serde_json::from_value(serde_json::to_value(&*photo.develop).unwrap()).unwrap();
+        assert_eq!(back.light.exposure, 0.7);
+        assert_eq!(back.light.contrast, 22.0);
+        assert_eq!(back.wb.temp, 3200.0);
+        // untouched fields round-trip at their defaults
+        assert_eq!(back.color.vibrance, 0.0);
     }
 }

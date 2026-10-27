@@ -1,15 +1,20 @@
 <script lang="ts">
     import { icons } from "../lib/icons";
     import { check } from "@tauri-apps/plugin-updater";
-    import {
+    import { 
         appSettings,
         showSettings,
         updateSettings,
         folders,
+        type ExpressiveTier,
     } from "../lib/store";
     import type { AccentColor, ColorPalette } from "../lib/store";
 
     type SettingsTab = "general" | "appearance" | "library" | "shortcuts";
+
+    function tierFromValue(v: string): ExpressiveTier {
+        return v as ExpressiveTier;
+    }
     let activeTab: SettingsTab = "general";
 
     function close() {
@@ -290,7 +295,7 @@
                                 value={$appSettings.expressiveTier}
                                 on:change={(e) =>
                                     updateSettings({
-                                        expressiveTier: e.currentTarget.value,
+                                        expressiveTier: tierFromValue(e.currentTarget.value),
                                         tierAutoDetected: false,
                                     })}
                             >

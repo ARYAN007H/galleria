@@ -2,6 +2,13 @@
  * Tauri API Mock Layer
  * Provides stub implementations of Tauri APIs when running in a standard browser,
  * enabling UI development and testing without the Tauri runtime.
+ *
+ * ⚠️ WHAT YOU SEE HERE IS NOT THE ENGINE. The real app renders through the
+ * LightCraft develop pipeline (scene-referred Rec.2020, GPU). This mock draws a
+ * canvas and applies a few approximation transforms (exposure/contrast/temp/
+ * saturation) — enough to exercise UI flows and the IPC contract, never to
+ * judge image quality, colour, or performance. Anything visual in browser mode
+ * is approximate by definition. Real numbers come from `npm run tauri:dev`.
  */
 
 import type { Photo, Tag, Album, SourceDirectory } from './store'
@@ -163,6 +170,8 @@ const invokeHandlers: Record<string, InvokeHandler> = {
     'unload_editor_source': () => null,
     'load_edit_params': () => null,
     'save_edit_params': () => null,
+    'write_xmp_sidecar': () => null,
+    'read_xmp_sidecar': () => null,
     'auto_enhance': () => ({
         light: { exposure: 0.25, contrast: 8, highlights: -12, shadows: 14, whites: 0, blacks: -4 },
         color: { vibrance: 15, saturation: 0 },

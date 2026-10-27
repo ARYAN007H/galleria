@@ -48,6 +48,8 @@ lightcraft-develop = { path = "../../lightcraft/crates/develop" }
 lightcraft-codecs = { path = "../../lightcraft/crates/codecs" }
 lightcraft-raster = { path = "../../lightcraft/crates/raster" }
 lightcraft-raw = { path = "../../lightcraft/crates/raw" }
+lightcraft-meta = { path = "../../lightcraft/crates/meta" }
+lightcraft-catalog = { path = "../../lightcraft/crates/catalog" }
 
 [features]
 default = ["custom-protocol"]
