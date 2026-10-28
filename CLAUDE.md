@@ -44,6 +44,8 @@ Run from repo root:
 ## Git & Workflow Hygiene
 
 - Conventional Commits, imperative subject: `feat:`, `fix:`, `perf:`, `docs:`, `chore:`; scope platform-specific fixes (`fix(linux): …`).
-- Trunk-based on `main`. Releases: bump the version in `package.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml`, commit as `chore: release vX.Y.Z`, push tag `vX.Y.Z` — the `v*` tag triggers `.github/workflows/release.yml`.
-- If a branch is needed: `feat/<kebab-scope>` or `fix/<kebab-scope>`; merge to `main` once verified.
+- **PR-first workflow (standing user directive, 2026-10-28): never commit directly to `main`.** Branch as `feat/<kebab-scope>`, `fix/<kebab-scope>`, `docs/<kebab-scope>`, or `chore/<kebab-scope>`, push, and open a PR via `gh pr create` with a one-paragraph description, the verification results, and the issue it closes (`Fixes #N`). Only exceptions (direct commits to `main`): release version-bump commits + tags, and urgent CI/workflow repairs.
+- Track planned work as GitHub issues (`gh issue create`); pull backlog items from `docs/HANDOFF-lightcraft-swap.md` and reference the issue from every PR. Open issues before starting work, not after.
+- PRs are merged by the user after review; merge yourself only when the user explicitly asks. Delete the branch after merge.
+- Releases: bump the version in `package.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml`, commit as `chore: release vX.Y.Z` (direct to `main` is allowed here), push tag `vX.Y.Z` — the `v*` tag triggers `.github/workflows/release.yml`. After CI completes, check `gh release list` for duplicate drafts on the tag (matrix jobs can race and split assets) and consolidate before publishing.
 - Keep planning docs in-tree (`docs/`, `vision.md`) and update them when architecture decisions change.
