@@ -1,6 +1,6 @@
 [package]
 name = "galleria_expressive"
-version = "0.16.1"
+version = "0.16.2"
 description = "Photo and media viewer with Liquid Glass UI"
 authors = ["you"]
 edition = "2021"

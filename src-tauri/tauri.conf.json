@@ -1,6 +1,6 @@
 {
     "productName": "Galleria Expressive",
-    "version": "0.16.1",
+    "version": "0.16.2",
     "identifier": "com.galleria.app",
     "build": {
         "beforeDevCommand": "npm run dev",
